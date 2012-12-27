@@ -1,0 +1,19 @@
+import "common.proto";
+package atlas.topic;
+
+option java_package = "org.atlasapi.serialization.protobuf";
+option java_outer_classname = "TopicProtos";
+option optimize_for = SPEED;
+
+
+message TopicRef {
+    optional Topic topic = 1;
+    optional float weighting = 2;
+    optional bool supervised = 3;
+    optional string relationship = 4;
+    optional int32 offset = 5;
+}
+
+message Topic {
+    optional common.Identification id = 1;
+}

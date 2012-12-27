@@ -1,0 +1,38 @@
+package atlas.common;
+
+option java_package = "org.atlasapi.serialization.protobuf";
+option java_outer_classname = "CommonProtos";
+option optimize_for = SPEED;
+
+message DateTime {
+    required int64 millis = 1;
+    optional string timezone = 2;
+}
+
+message LocaleString {
+    required string value = 1;
+    optional string locale = 2;
+}
+
+message Identification {
+    optional int64 id = 1;
+    optional string source = 2;
+    optional string type = 3;
+    repeated Alias aliases = 4;
+    repeated Reference equivs = 5;
+    optional DateTime first_seen = 6;
+    optional DateTime last_updated = 7;
+    optional DateTime child_last_updated = 8;
+}
+
+message Reference {
+    optional int64 id = 1;
+    optional string source = 2;
+    optional string type = 3;
+    optional string sort = 4;
+}
+
+message Alias {
+    optional string alias = 1;
+    optional string type = 2;
+}
