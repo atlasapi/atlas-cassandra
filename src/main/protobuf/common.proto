@@ -6,7 +6,6 @@ option optimize_for = SPEED;
 
 message DateTime {
     required int64 millis = 1;
-    optional string timezone = 2;
 }
 
 message LocaleString {
@@ -22,7 +21,7 @@ message Identification {
     repeated Reference equivs = 5;
     optional DateTime first_seen = 6;
     optional DateTime last_updated = 7;
-    optional DateTime child_last_updated = 8;
+    optional string uri = 9;
 }
 
 message Reference {
@@ -30,9 +29,10 @@ message Reference {
     optional string source = 2;
     optional string type = 3;
     optional string sort = 4;
+    optional DateTime updated = 5;
 }
 
 message Alias {
-    optional string alias = 1;
-    optional string type = 2;
+    optional string value = 1;
+    optional string namespace = 2;
 }
