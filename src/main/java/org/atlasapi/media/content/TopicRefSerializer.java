@@ -3,7 +3,6 @@ package org.atlasapi.media.content;
 import org.atlasapi.media.common.Id;
 import org.atlasapi.media.entity.TopicRef;
 import org.atlasapi.media.entity.TopicRef.Relationship;
-import org.atlasapi.serialization.protobuf.CommonProtos;
 import org.atlasapi.serialization.protobuf.ContentProtos;
 import org.atlasapi.serialization.protobuf.TopicProtos;
 import org.atlasapi.serialization.protobuf.TopicProtos.Topic.Builder;
@@ -29,14 +28,12 @@ public class TopicRefSerializer {
     }
 
     private Builder serialize(Id topic) {
-        return TopicProtos.Topic.newBuilder()
-            .setId(CommonProtos.Identification.newBuilder()
-                .setId(topic.longValue()));
+        return TopicProtos.Topic.newBuilder().setId(topic.longValue());
     }
     
     public TopicRef deserialize(ContentProtos.TopicRef ref) {
         return new TopicRef(
-            Id.valueOf(ref.getTopic().getId().getId()),
+            Id.valueOf(ref.getTopic().getId()),
             ref.hasWeighting() ? ref.getWeighting() : null,
             ref.hasSupervised() ? ref.getSupervised() : null,
             ref.hasRelationship() ? Relationship.fromString(ref.getRelationship()).get() : null,

@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map.Entry;
 
+import org.atlasapi.media.common.Serializer;
 import org.atlasapi.serialization.protobuf.CommonProtos.Reference;
 import static org.atlasapi.serialization.protobuf.ContentProtos.Column.*;
 import org.atlasapi.serialization.protobuf.ContentProtos;
