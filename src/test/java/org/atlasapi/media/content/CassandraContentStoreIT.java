@@ -13,8 +13,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.concurrent.Executors;
-
+import org.atlasapi.media.common.CassandraHelper;
 import org.atlasapi.media.common.Id;
 import org.atlasapi.media.entity.Brand;
 import org.atlasapi.media.entity.EntityType;
@@ -34,58 +33,24 @@ import org.junit.runner.RunWith;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metabroadcast.common.collect.OptionalMap;
 import com.metabroadcast.common.ids.IdGenerator;
 import com.metabroadcast.common.time.Clock;
 import com.metabroadcast.common.time.DateTimeZones;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Keyspace;
-import com.netflix.astyanax.connectionpool.NodeDiscoveryType;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
-import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
-import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
-import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
-import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
-import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 
 @RunWith(MockitoJUnitRunner.class)
 public class CassandraContentStoreIT {
 
-    private static String seeds = "127.0.0.1";
-    private static int clientThreads = 25;
-    private static int connectionTimeout = 60000;
-    private static int port = 9160;
-
-    private static final AstyanaxContext<Keyspace> context = new AstyanaxContext.Builder()
-        .forCluster("Atlas")
-        .forKeyspace("Atlas_Testing")
-        .withAstyanaxConfiguration(new AstyanaxConfigurationImpl()
-            .setDiscoveryType(NodeDiscoveryType.RING_DESCRIBE)
-            .setConnectionPoolType(ConnectionPoolType.ROUND_ROBIN)
-            .setAsyncExecutor(Executors.newFixedThreadPool(clientThreads,
-                new ThreadFactoryBuilder().setDaemon(true)
-                .setNameFormat("AstyanaxAsync-%d")
-                .build()
-            ))
-        )
-        .withConnectionPoolConfiguration(new ConnectionPoolConfigurationImpl("Altas")
-            .setPort(port)
-            .setMaxBlockedThreadsPerHost(clientThreads)
-            .setMaxConnsPerHost(clientThreads)
-            .setMaxConns(clientThreads * 5)
-            .setConnectTimeout(connectionTimeout)
-            .setSeeds(seeds)
-        )
-        .withConnectionPoolMonitor(new CountingConnectionPoolMonitor())
-        .buildKeyspace(ThriftFamilyFactory.getInstance());
+    private static final AstyanaxContext<Keyspace> context = 
+        CassandraHelper.testCassandraContext();
     
     private final ContentHasher hasher = mock(ContentHasher.class);
     private final IdGenerator idGenerator = mock(IdGenerator.class);
@@ -100,23 +65,9 @@ public class CassandraContentStoreIT {
     @BeforeClass
     public static void setup() throws ConnectionException {
         context.start();
-        context.getEntity().createKeyspace(ImmutableMap.<String, Object> builder()
-            .put("strategy_options", ImmutableMap.<String, Object> builder()
-                .put("replication_factor", "1")
-                .build())
-            .put("strategy_class", "SimpleStrategy")
-            .build()
-            );
-        context.getEntity().createColumnFamily(
-            ColumnFamily.newColumnFamily("Content", LongSerializer.get(), 
-                StringSerializer.get()),
-            ImmutableMap.<String,Object>of()
-        );
-        context.getEntity().createColumnFamily(
-            ColumnFamily.newColumnFamily("Content_aliases", StringSerializer.get(), 
-                StringSerializer.get()),
-                ImmutableMap.<String,Object>of()
-        );
+        CassandraHelper.createKeyspace(context);
+        CassandraHelper.createColumnFamily(context, "Content", LongSerializer.get(), StringSerializer.get());
+        CassandraHelper.createColumnFamily(context, "Content_aliases", StringSerializer.get(), StringSerializer.get());
     }
     
     @AfterClass

@@ -7,5 +7,12 @@ option optimize_for = SPEED;
 
 
 message Topic {
-    optional common.Identification id = 1;
+    optional int64 id = 1;
+    optional string source = 2;
+    optional string type = 3;
+    repeated common.Alias aliases = 4;
+    repeated common.LocaleString title = 5;
+    repeated common.LocaleString description = 6;
+    repeated string image = 7;
+    repeated string thumbnail = 8;
 }
