@@ -1,11 +1,17 @@
 package org.atlasapi.media;
 
+import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.Executors;
 
 import org.atlasapi.media.content.CassandraContentStore;
 import org.atlasapi.media.content.Content;
 import org.atlasapi.media.content.ContentHasher;
+import org.atlasapi.media.topic.CassandraTopicStore;
+import org.atlasapi.media.topic.Topic;
+import org.atlasapi.media.topic.TopicStore;
 
+import com.google.common.base.Equivalence;
 import com.google.common.base.Joiner;
 import com.google.common.util.concurrent.AbstractIdleService;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -78,9 +84,34 @@ public class CassandraPersistenceModule extends AbstractIdleService implements P
         return new ContentHasher() {
             @Override
             public String hash(Content content) {
-                return String.valueOf(content.hashCode());
+                return UUID.randomUUID().toString();
             }
         };
     }
 
+    @Override
+    public TopicStore topicStore() {
+        IdGenerator idGenerator = idGeneratorBuilder.generator("topics");
+        return CassandraTopicStore.builder(context, "topic", topicEquivalence(), idGenerator)
+            .withReadConsistency(ConsistencyLevel.CL_QUORUM)
+            .withWriteConsistency(ConsistencyLevel.CL_QUORUM)
+            .build();
+    }
+
+    private Equivalence<? super Topic> topicEquivalence() {
+        return new Equivalence<Topic>(){
+
+            private final Random random = new Random();
+
+            @Override
+            protected boolean doEquivalent(Topic a, Topic b) {
+                return false;
+            }
+
+            @Override
+            protected int doHash(Topic t) {
+                return random.nextInt();
+            }
+        };
+    }
 }
