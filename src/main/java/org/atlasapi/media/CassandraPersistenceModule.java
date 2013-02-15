@@ -28,7 +28,7 @@ import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 
 
-public class CassandraPersistenceModule extends AbstractIdleService implements PersisitenceModule {
+public class CassandraPersistenceModule extends AbstractIdleService implements PersistenceModule {
 
     private final AstyanaxContext<Keyspace> context;
     private final IdGeneratorBuilder idGeneratorBuilder;
