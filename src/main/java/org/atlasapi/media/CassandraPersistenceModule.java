@@ -1,11 +1,9 @@
 package org.atlasapi.media;
 
 import java.util.Random;
-import java.util.UUID;
 import java.util.concurrent.Executors;
 
 import org.atlasapi.media.content.CassandraContentStore;
-import org.atlasapi.media.content.Content;
 import org.atlasapi.media.content.ContentHasher;
 import org.atlasapi.media.topic.CassandraTopicStore;
 import org.atlasapi.media.topic.Topic;
@@ -15,7 +13,6 @@ import com.google.common.base.Equivalence;
 import com.google.common.base.Joiner;
 import com.google.common.util.concurrent.AbstractIdleService;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.metabroadcast.common.ids.IdGenerator;
 import com.metabroadcast.common.ids.IdGeneratorBuilder;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Keyspace;
@@ -31,9 +28,12 @@ import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 public class CassandraPersistenceModule extends AbstractIdleService implements PersistenceModule {
 
     private final AstyanaxContext<Keyspace> context;
-    private final IdGeneratorBuilder idGeneratorBuilder;
+    private final CassandraContentStore contentStore;
+    private final CassandraTopicStore topicStore;
     
-    public CassandraPersistenceModule(Iterable<String> seeds, int port, String cluster, String keyspace, int threadCount, int connectionTimeout, IdGeneratorBuilder idGeneratorBuilder) {
+    public CassandraPersistenceModule(Iterable<String> seeds, int port, 
+      String cluster, String keyspace, int threadCount, int connectionTimeout, 
+      IdGeneratorBuilder idGeneratorBuilder, ContentHasher hasher) {
         context = new AstyanaxContext.Builder()
             .forCluster(cluster)
             .forKeyspace(keyspace)
@@ -57,7 +57,17 @@ public class CassandraPersistenceModule extends AbstractIdleService implements P
             )
             .withConnectionPoolMonitor(new CountingConnectionPoolMonitor())
             .buildKeyspace(ThriftFamilyFactory.getInstance());
-        this.idGeneratorBuilder = idGeneratorBuilder;
+
+        this.contentStore = CassandraContentStore.builder(context, "content", 
+            hasher, idGeneratorBuilder.generator("content"))
+            .withReadConsistency(ConsistencyLevel.CL_ONE)
+            .withWriteConsistency(ConsistencyLevel.CL_QUORUM)
+            .build();
+        this.topicStore = CassandraTopicStore.builder(context, "topic", 
+            topicEquivalence(), idGeneratorBuilder.generator("content"))
+            .withReadConsistency(ConsistencyLevel.CL_ONE)
+            .withWriteConsistency(ConsistencyLevel.CL_QUORUM)
+            .build();
     }
 
     @Override
@@ -72,30 +82,12 @@ public class CassandraPersistenceModule extends AbstractIdleService implements P
     
     @Override
     public CassandraContentStore contentStore() {
-        ContentHasher hasher = contentHasher();
-        IdGenerator idGenerator = idGeneratorBuilder.generator("content");
-        return CassandraContentStore.builder(context, "content", hasher, idGenerator)
-            .withReadConsistency(ConsistencyLevel.CL_QUORUM)
-            .withWriteConsistency(ConsistencyLevel.CL_QUORUM)
-            .build();
-    }
-
-    private ContentHasher contentHasher() {
-        return new ContentHasher() {
-            @Override
-            public String hash(Content content) {
-                return UUID.randomUUID().toString();
-            }
-        };
+        return contentStore; 
     }
 
     @Override
     public TopicStore topicStore() {
-        IdGenerator idGenerator = idGeneratorBuilder.generator("topics");
-        return CassandraTopicStore.builder(context, "topic", topicEquivalence(), idGenerator)
-            .withReadConsistency(ConsistencyLevel.CL_QUORUM)
-            .withWriteConsistency(ConsistencyLevel.CL_QUORUM)
-            .build();
+        return topicStore;
     }
 
     private Equivalence<? super Topic> topicEquivalence() {
