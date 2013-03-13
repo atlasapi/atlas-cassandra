@@ -1,12 +1,11 @@
 package org.atlasapi.media.common;
 
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertThat;
 
+import org.atlasapi.equiv.EquivalenceRef;
 import org.atlasapi.media.entity.Item;
-import org.atlasapi.media.entity.LookupRef;
 import org.atlasapi.media.entity.Publisher;
-import org.atlasapi.persistence.content.ContentCategory;
 import org.atlasapi.serialization.protobuf.CommonProtos;
 import org.joda.time.DateTime;
 import org.junit.Test;
@@ -27,7 +26,7 @@ public class IdentifiedSerializerTest {
         identified.setAliases(ImmutableSet.of("alias1","alias2"));
         identified.setCanonicalUri("canonicalUri");
         identified.setEquivalenceUpdate(new DateTime(DateTimeZones.UTC));
-        identified.setEquivalentTo(ImmutableSet.of(new LookupRef(Id.valueOf(1),Publisher.BBC, ContentCategory.CHILD_ITEM)));
+        identified.setEquivalentTo(ImmutableSet.of(new EquivalenceRef(Id.valueOf(1),Publisher.BBC)));
         
         CommonProtos.Identification serialized = serializer.serialize(identified).build();
         

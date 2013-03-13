@@ -1,5 +1,6 @@
 package org.atlasapi.media.content;
 
+import org.atlasapi.equiv.EquivalenceRef;
 import org.atlasapi.media.common.ProtoBufUtils;
 import org.atlasapi.media.entity.Brand;
 import org.atlasapi.media.entity.Certificate;
@@ -14,7 +15,6 @@ import org.atlasapi.media.entity.Identified;
 import org.atlasapi.media.entity.Image;
 import org.atlasapi.media.entity.Item;
 import org.atlasapi.media.entity.KeyPhrase;
-import org.atlasapi.media.entity.LookupRef;
 import org.atlasapi.media.entity.MediaType;
 import org.atlasapi.media.entity.RelatedLink;
 import org.atlasapi.media.entity.ReleaseDate;
@@ -59,11 +59,10 @@ final class ContentSerializationVisitor implements ContentVisitor<Builder> {
         for (String alias : ided.getAliases()) {
             builder.addAliases(Alias.newBuilder().setValue(alias));
         }
-        for (LookupRef equivRef : ided.getEquivalentTo()) {
+        for (EquivalenceRef equivRef : ided.getEquivalentTo()) {
             builder.addEquivs(CommonProtos.Reference.newBuilder()
-                .setId(equivRef.id().longValue())
-                .setSource(equivRef.publisher().key())
-                .setType(equivRef.category().name())
+                .setId(equivRef.getId().longValue())
+                .setSource(equivRef.getPublisher().key())
             );
         }
         return builder;
