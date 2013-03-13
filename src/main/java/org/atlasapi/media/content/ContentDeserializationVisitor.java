@@ -2,6 +2,7 @@ package org.atlasapi.media.content;
 
 import static org.atlasapi.media.common.ProtoBufUtils.deserializeDateTime;
 
+import org.atlasapi.equiv.EquivalenceRef;
 import org.atlasapi.media.common.Id;
 import org.atlasapi.media.common.ProtoBufUtils;
 import org.atlasapi.media.entity.Brand;
@@ -18,7 +19,6 @@ import org.atlasapi.media.entity.Identified;
 import org.atlasapi.media.entity.Image;
 import org.atlasapi.media.entity.Item;
 import org.atlasapi.media.entity.KeyPhrase;
-import org.atlasapi.media.entity.LookupRef;
 import org.atlasapi.media.entity.MediaType;
 import org.atlasapi.media.entity.ParentRef;
 import org.atlasapi.media.entity.Publisher;
@@ -29,7 +29,6 @@ import org.atlasapi.media.entity.Song;
 import org.atlasapi.media.entity.Specialization;
 import org.atlasapi.media.entity.Subtitles;
 import org.atlasapi.media.entity.TopicRef;
-import org.atlasapi.persistence.content.ContentCategory;
 import org.atlasapi.serialization.protobuf.CommonProtos.Alias;
 import org.atlasapi.serialization.protobuf.CommonProtos.Reference;
 import org.atlasapi.serialization.protobuf.ContentProtos;
@@ -76,11 +75,10 @@ public class ContentDeserializationVisitor implements ContentVisitor<Content> {
         }
         identified.setAliases(aliases.build());
         
-        ImmutableSet.Builder<LookupRef> equivRefs = ImmutableSet.builder();
+        ImmutableSet.Builder<EquivalenceRef> equivRefs = ImmutableSet.builder();
         for (Reference equivRef : msg.getEquivsList()) {
-            equivRefs.add(new LookupRef(Id.valueOf(equivRef.getId()),
-                Publisher.fromKey(equivRef.getSource()).requireValue(),
-                ContentCategory.valueOf(equivRef.getType())
+            equivRefs.add(new EquivalenceRef(Id.valueOf(equivRef.getId()),
+                Publisher.fromKey(equivRef.getSource()).requireValue()
             ));
         }
         identified.setEquivalentTo(equivRefs.build());

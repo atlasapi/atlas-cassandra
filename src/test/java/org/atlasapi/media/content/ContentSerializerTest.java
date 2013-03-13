@@ -4,6 +4,7 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
+import org.atlasapi.equiv.EquivalenceRef;
 import org.atlasapi.media.common.Id;
 import org.atlasapi.media.common.Serializer;
 import org.atlasapi.media.entity.Brand;
@@ -21,21 +22,19 @@ import org.atlasapi.media.entity.Image;
 import org.atlasapi.media.entity.Item;
 import org.atlasapi.media.entity.Item.ContainerSummary;
 import org.atlasapi.media.entity.KeyPhrase;
-import org.atlasapi.media.entity.LookupRef;
 import org.atlasapi.media.entity.MediaType;
 import org.atlasapi.media.entity.ParentRef;
 import org.atlasapi.media.entity.Publisher;
 import org.atlasapi.media.entity.RelatedLink;
 import org.atlasapi.media.entity.ReleaseDate;
+import org.atlasapi.media.entity.ReleaseDate.ReleaseType;
 import org.atlasapi.media.entity.Series;
 import org.atlasapi.media.entity.Song;
 import org.atlasapi.media.entity.Specialization;
 import org.atlasapi.media.entity.Subtitles;
 import org.atlasapi.media.entity.TopicRef;
-import org.atlasapi.media.entity.ReleaseDate.ReleaseType;
 import org.atlasapi.media.entity.TopicRef.Relationship;
 import org.atlasapi.media.entity.Version;
-import org.atlasapi.persistence.content.ContentCategory;
 import org.atlasapi.serialization.protobuf.ContentProtos;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -111,6 +110,7 @@ public class ContentSerializerTest {
         Item deserializedItem = (Item)deserialized;
         checkItemProperties(deserializedItem, item);
     }
+    
     
     @Test
     public void testDeSerializesEpisode() {
@@ -303,7 +303,7 @@ public class ContentSerializerTest {
         identified.setAliases(ImmutableSet.of("alias1","alias2"));
         identified.setCanonicalUri("canonicalUri");
         identified.setEquivalenceUpdate(new DateTime(DateTimeZones.UTC));
-        identified.setEquivalentTo(ImmutableSet.of(new LookupRef(Id.valueOf(1),Publisher.BBC, ContentCategory.CHILD_ITEM)));
+        identified.setEquivalentTo(ImmutableSet.of(new EquivalenceRef(Id.valueOf(1) ,Publisher.BBC)));
     }
 
 }

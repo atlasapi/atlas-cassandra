@@ -1,9 +1,9 @@
 package org.atlasapi.media.content;
 
 import static org.atlasapi.media.segment.SegmentEvent.TO_REF;
-import static org.hamcrest.Matchers.either;
 import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.isOneOf;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThat;
 
@@ -151,14 +151,14 @@ public class VersionsSerializerTest {
         Set<Version> deserialized = serializer.deserialize(serialized);
         
         Version deserializedVersion1 = versionWith3d(deserialized, version1.is3d());
-        assertThat(deserializedVersion1.getBroadcasts().size(), either(is(3)).or(is(0)));
-        assertThat(deserializedVersion1.getManifestedAs().size(), either(is(3)).or(is(0)));
-        assertThat(deserializedVersion1.getSegmentEvents().size(), either(is(3)).or(is(0)));
+        assertThat(deserializedVersion1.getBroadcasts().size(), isOneOf(3, 0));
+        assertThat(deserializedVersion1.getManifestedAs().size(), isOneOf(3, 0));
+        assertThat(deserializedVersion1.getSegmentEvents().size(), isOneOf(3, 0));
         
         Version deserializedVersion2 = versionWith3d(deserialized, version2.is3d());
-        assertThat(deserializedVersion2.getBroadcasts().size(), either(is(3)).or(is(0)));
-        assertThat(deserializedVersion2.getManifestedAs().size(), either(is(3)).or(is(0)));
-        assertThat(deserializedVersion2.getSegmentEvents().size(), either(is(3)).or(is(0)));
+        assertThat(deserializedVersion2.getBroadcasts().size(), isOneOf(3, 0));
+        assertThat(deserializedVersion2.getManifestedAs().size(), isOneOf(3, 0));
+        assertThat(deserializedVersion2.getSegmentEvents().size(), isOneOf(3, 0));
         
         assertNotEqualSize(deserializedVersion1.getBroadcasts(), deserializedVersion2.getBroadcasts());
         assertNotEqualSize(deserializedVersion1.getManifestedAs(), deserializedVersion2.getManifestedAs());
