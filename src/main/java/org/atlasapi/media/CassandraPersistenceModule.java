@@ -1,6 +1,5 @@
 package org.atlasapi.media;
 
-import java.util.Random;
 import java.util.concurrent.Executors;
 
 import org.atlasapi.media.content.CassandraContentStore;
@@ -80,6 +79,10 @@ public class CassandraPersistenceModule extends AbstractIdleService implements P
         context.shutdown();
     }
     
+    public AstyanaxContext<Keyspace> getContext() {
+        return this.context;
+    }
+    
     @Override
     public CassandraContentStore contentStore() {
         return contentStore; 
@@ -93,8 +96,6 @@ public class CassandraPersistenceModule extends AbstractIdleService implements P
     private Equivalence<? super Topic> topicEquivalence() {
         return new Equivalence<Topic>(){
 
-            private final Random random = new Random();
-
             @Override
             protected boolean doEquivalent(Topic a, Topic b) {
                 return false;
@@ -102,7 +103,7 @@ public class CassandraPersistenceModule extends AbstractIdleService implements P
 
             @Override
             protected int doHash(Topic t) {
-                return random.nextInt();
+                return 0;
             }
         };
     }
