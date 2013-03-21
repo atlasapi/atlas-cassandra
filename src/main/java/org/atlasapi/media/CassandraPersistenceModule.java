@@ -2,6 +2,7 @@ package org.atlasapi.media;
 
 import java.util.concurrent.Executors;
 
+import org.atlasapi.equiv.CassandraEquivalenceRecordStore;
 import org.atlasapi.media.content.CassandraContentStore;
 import org.atlasapi.media.content.ContentHasher;
 import org.atlasapi.media.topic.CassandraTopicStore;
@@ -29,6 +30,7 @@ public class CassandraPersistenceModule extends AbstractIdleService implements P
     private final AstyanaxContext<Keyspace> context;
     private final CassandraContentStore contentStore;
     private final CassandraTopicStore topicStore;
+    private final CassandraEquivalenceRecordStore equivalenceRecordStore;
     
     public CassandraPersistenceModule(Iterable<String> seeds, int port, 
       String cluster, String keyspace, int threadCount, int connectionTimeout, 
@@ -67,6 +69,9 @@ public class CassandraPersistenceModule extends AbstractIdleService implements P
             .withReadConsistency(ConsistencyLevel.CL_ONE)
             .withWriteConsistency(ConsistencyLevel.CL_QUORUM)
             .build();
+        this.equivalenceRecordStore = new CassandraEquivalenceRecordStore(
+            context, "equivalence_record", ConsistencyLevel.CL_ONE, ConsistencyLevel.CL_QUORUM
+        );
     }
 
     @Override
@@ -92,7 +97,7 @@ public class CassandraPersistenceModule extends AbstractIdleService implements P
     public TopicStore topicStore() {
         return topicStore;
     }
-
+    
     private Equivalence<? super Topic> topicEquivalence() {
         return new Equivalence<Topic>(){
 
@@ -107,4 +112,9 @@ public class CassandraPersistenceModule extends AbstractIdleService implements P
             }
         };
     }
+    
+    public CassandraEquivalenceRecordStore getEquivalenceRecordStore() {
+        return this.equivalenceRecordStore;
+    }
+    
 }
