@@ -2,6 +2,7 @@ package org.atlasapi.media.topic;
 
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.isA;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.argThat;
@@ -22,6 +23,8 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.runners.MockitoJUnitRunner;
 
 import com.google.common.base.Equivalence;
 import com.google.common.collect.ImmutableList;
@@ -36,6 +39,7 @@ import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 
+@RunWith(MockitoJUnitRunner.class)
 public class CassandraTopicStoreIT {
     
     public class StubbableEquivalence<T> extends Equivalence<T> {
@@ -93,6 +97,7 @@ public class CassandraTopicStoreIT {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     public void testResolveIds() {
         Topic topic1 = new Topic();
         topic1.setPublisher(Publisher.DBPEDIA);
@@ -114,14 +119,15 @@ public class CassandraTopicStoreIT {
         assertThat(topic1result.written(), is(true));
         assertThat(topic2result.written(), is(true));
 
-        verify(equiv).doEquivalent(argThat(is(any(Topic.class))), argThat(is(any(Topic.class))));
+        verify(equiv, never()).doEquivalent(argThat(isA(Topic.class)), argThat(isA(Topic.class)));
+        reset(equiv);
 
         Id topic1id = topic1result.getResource().getId();
         Id topic2id = topic2result.getResource().getId();
 
         Resolved<Topic> resolved = topicStore.resolveIds(ImmutableList.of(
             topic1id, topic2id
-            ));
+        ));
 
         OptionalMap<Id, Topic> resolvedMap = resolved.toMap();
         assertThat(resolvedMap.get(topic1id).get().getAliases(), hasItem("dbpedia"));
