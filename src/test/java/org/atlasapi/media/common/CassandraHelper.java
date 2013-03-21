@@ -19,6 +19,7 @@ import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 
 public class CassandraHelper {
 
+    //TODO: externalize
     private static String seeds = "127.0.0.1";
     private static int clientThreads = 25;
     private static int connectionTimeout = 60000;
