@@ -28,7 +28,7 @@ create column family content_aliases
   and caching = 'KEYS_ONLY'
   and compression_options = {'sstable_compression' : 'org.apache.cassandra.io.compress.SnappyCompressor'};
   
-  create column family topics
+create column family topics
   with column_type = 'Standard'
   and comparator = 'UTF8Type'
   and default_validation_class = 'BytesType'
@@ -58,7 +58,7 @@ create column family topics_aliases
   and caching = 'KEYS_ONLY'
   and compression_options = {'sstable_compression' : 'org.apache.cassandra.io.compress.SnappyCompressor'};
   
-create column family equiv
+create column family equivalence_record
   with column_type = 'Standard'
   and comparator = 'UTF8Type'
   and default_validation_class = 'BytesType'
