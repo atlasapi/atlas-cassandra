@@ -4,6 +4,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
@@ -113,7 +114,7 @@ public class CassandraTopicStoreIT {
         assertThat(topic1result.written(), is(true));
         assertThat(topic2result.written(), is(true));
 
-        verify(equiv, never()).equivalent(any(Topic.class), any(Topic.class));
+        verify(equiv).doEquivalent(argThat(is(any(Topic.class))), argThat(is(any(Topic.class))));
 
         Id topic1id = topic1result.getResource().getId();
         Id topic2id = topic2result.getResource().getId();
