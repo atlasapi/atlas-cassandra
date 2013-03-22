@@ -1,4 +1,4 @@
-import "descriptor.proto";
+import "google/protobuf/descriptor.proto";
 import "common.proto";
 import "topic.proto";
 package atlas.content;
