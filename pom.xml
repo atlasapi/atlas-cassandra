@@ -110,7 +110,7 @@
         <dependency>
             <groupId>com.netflix.astyanax</groupId>
             <artifactId>astyanax</artifactId>
-            <version>1.56.18</version>
+            <version>1.56.26</version>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>

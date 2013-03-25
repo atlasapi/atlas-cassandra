@@ -13,6 +13,10 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
 import org.atlasapi.media.common.CassandraHelper;
 import org.atlasapi.media.common.Id;
 import org.atlasapi.media.entity.Brand;
@@ -82,7 +86,7 @@ public class CassandraContentStoreIT {
     }
     
     @Test
-    public void testWriteAndReadTopLevelItem() {
+    public void testWriteAndReadTopLevelItem() throws Exception {
         Content content = create(new Item());
         content.setTitle("title");
         
@@ -95,8 +99,7 @@ public class CassandraContentStoreIT {
         assertThat(writeResult.getResource().getId().longValue(), is(1234l));
         assertFalse(writeResult.getPrevious().isPresent());
         
-        Resolved<Content> resolved = store.resolveIds(ImmutableList.of(content.getId()));
-        Content item = Iterables.getOnlyElement(resolved.getResources());
+        Content item = resolve(content.getId().longValue());
         
         assertThat(item.getId(), is(writeResult.getResource().getId()));
         assertThat(item.getTitle(), is(content.getTitle()));
@@ -107,7 +110,7 @@ public class CassandraContentStoreIT {
     }
     
     @Test
-    public void testContentNotWrittenWhenHashNotChanged() {
+    public void testContentNotWrittenWhenHashNotChanged() throws Exception {
         Content content = create(new Item());
         content.setTitle("title");
         
@@ -127,8 +130,7 @@ public class CassandraContentStoreIT {
         verify(idGenerator, times(1)).generateRaw();
         verify(clock, times(1)).now();
         
-        Resolved<Content> resolved = store.resolveIds(ImmutableList.of(content.getId()));
-        Content item = Iterables.getOnlyElement(resolved.getResources());
+        Content item = resolve(content.getId().longValue());
         
         assertThat(item.getId(), is(content.getId()));
         assertThat(item.getTitle(), is(content.getTitle()));
@@ -139,7 +141,7 @@ public class CassandraContentStoreIT {
     }
 
     @Test
-    public void testContentWrittenWhenHashChanged() {
+    public void testContentWrittenWhenHashChanged() throws Exception {
         Content content = create(new Item());
         content.setTitle("title");
         
@@ -178,7 +180,7 @@ public class CassandraContentStoreIT {
     }
     
     @Test
-    public void testResolvesExistingContentByAlias() {
+    public void testResolvesExistingContentByAlias() throws Exception {
 
         Item bbcItem = new Item();
         bbcItem.setPublisher(Publisher.BBC);
@@ -299,7 +301,7 @@ public class CassandraContentStoreIT {
     }
     
     @Test
-    public void testWritingItemWritesRefIntoParent() {
+    public void testWritingItemWritesRefIntoParent() throws Exception {
         
         when(clock.now()).thenReturn(new DateTime(DateTimeZones.UTC));
         when(idGenerator.generateRaw())
@@ -325,7 +327,7 @@ public class CassandraContentStoreIT {
     }
     
     @Test
-    public void testWritingFullContentHierarchy() {
+    public void testWritingFullContentHierarchy() throws Exception {
         
         DateTime now = new DateTime(DateTimeZones.UTC);
         
@@ -545,8 +547,8 @@ public class CassandraContentStoreIT {
         return content;
     }
     
-    private Content resolve(Long id) {
-        Resolved<Content> resolved = store.resolveIds(ImmutableList.of(Id.valueOf(id)));
+    private Content resolve(Long id) throws InterruptedException, ExecutionException, TimeoutException {
+        Resolved<Content> resolved = store.resolveIds(ImmutableList.of(Id.valueOf(id))).get(1, TimeUnit.SECONDS);
         return Iterables.getOnlyElement(resolved.getResources());
     }
 
