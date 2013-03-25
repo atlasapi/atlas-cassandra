@@ -8,7 +8,6 @@ import static org.atlasapi.media.content.ContentColumn.TYPE;
 
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
@@ -22,8 +21,7 @@ import org.atlasapi.media.entity.Publisher;
 import org.atlasapi.media.entity.Series;
 import org.atlasapi.media.entity.SeriesRef;
 import org.atlasapi.media.util.Resolved;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.atlasapi.util.CassandraUtil;
 
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
@@ -37,6 +35,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.metabroadcast.common.collect.ImmutableOptionalMap;
 import com.metabroadcast.common.collect.OptionalMap;
 import com.metabroadcast.common.ids.IdGenerator;
@@ -46,7 +46,6 @@ import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
-import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
 import com.netflix.astyanax.model.Column;
@@ -115,9 +114,7 @@ public final class CassandraContentStore extends AbstractContentStore {
     private final ColumnFamily<Long, String> mainCf;
     private final ColumnFamily<String, String> aliasCf;
     
-    private final Logger log = LoggerFactory.getLogger(getClass());
     private final ContentMarshaller marshaller = new ProtobufContentMarshaller();
-    
     private final Function<Row<Long, String>, Content> rowToContent =
         new Function<Row<Long, String>, Content>() {
             @Override
@@ -125,7 +122,13 @@ public final class CassandraContentStore extends AbstractContentStore {
                 return marshaller.unmarshallCols(input.getColumns());
             }
         };
-
+    private final Function<Rows<Long, String>, Resolved<Content>> toResolvedContent = 
+        new Function<Rows<Long, String>, Resolved<Content>>() {
+            @Override
+            public Resolved<Content> apply(Rows<Long, String> rows) {
+                return Resolved.valueOf(FluentIterable.from(rows).transform(rowToContent));
+            }
+        };
 
     public CassandraContentStore(AstyanaxContext<Keyspace> context,
         String cfName, ConsistencyLevel readConsistency, ConsistencyLevel writeConsistency, 
@@ -141,24 +144,21 @@ public final class CassandraContentStore extends AbstractContentStore {
     }
     
     @Override
-    public Resolved<Content> resolveIds(Iterable<Id> ids) {
+    public ListenableFuture<Resolved<Content>> resolveIds(Iterable<Id> ids) {
         try {
             Iterable<Long> longIds = Iterables.transform(ids, Id.toLongValue());
-            OperationResult<Rows<Long, String>> opResult = resolveLongs(longIds);
-            log.debug("{} resolve content: {}", Thread.currentThread().getId(), opResult.getLatency(TimeUnit.MILLISECONDS));
-            Rows<Long, String> rows = opResult.getResult();
-            return Resolved.valueOf(FluentIterable.from(rows).transform(rowToContent));
+            return Futures.transform(resolveLongs(longIds), toResolvedContent);
         } catch (Exception e) {
             throw new CassandraPersistenceException(Joiner.on(", ").join(ids), e);
         }
     }
 
-    private OperationResult<Rows<Long, String>> resolveLongs(Iterable<Long> longIds) throws ConnectionException {
-        return keyspace
+    private ListenableFuture<Rows<Long, String>> resolveLongs(Iterable<Long> longIds) throws ConnectionException {
+        return Futures.transform(keyspace
             .prepareQuery(mainCf)
             .setConsistencyLevel(readConsistency)
             .getKeySlice(longIds)
-            .execute();
+            .executeAsync(), CassandraUtil.<Rows<Long, String>>toResult());
     }
     
     @Override
@@ -166,7 +166,7 @@ public final class CassandraContentStore extends AbstractContentStore {
         try {
             Set<String> uniqueAliases = ImmutableSet.copyOf(aliases);
             List<Long> ids = resolveIdsForAliases(source, uniqueAliases);
-            Rows<Long,String> resolved = resolveLongs(ids).getResult();
+            Rows<Long,String> resolved = resolveLongs(ids).get();
             Iterable<Content> contents = Iterables.transform(resolved, rowToContent);
             ImmutableMap.Builder<String, Optional<Content>> aliasMap = ImmutableMap.builder();
             for (Content content : contents) {
