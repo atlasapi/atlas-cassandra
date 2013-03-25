@@ -16,7 +16,7 @@ create column family content
 create column family content_aliases
   with column_type = 'Standard'
   and comparator = 'UTF8Type'
-  and default_validation_class = 'BytesType'
+  and default_validation_class = 'LongType'
   and key_validation_class = 'UTF8Type'
   and read_repair_chance = 0.1
   and dclocal_read_repair_chance = 0.0
@@ -46,7 +46,7 @@ create column family topics
 create column family topics_aliases
   with column_type = 'Standard'
   and comparator = 'UTF8Type'
-  and default_validation_class = 'BytesType'
+  and default_validation_class = 'LongType'
   and key_validation_class = 'UTF8Type'
   and read_repair_chance = 0.1
   and dclocal_read_repair_chance = 0.0
