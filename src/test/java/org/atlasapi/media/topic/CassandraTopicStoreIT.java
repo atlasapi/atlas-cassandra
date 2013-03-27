@@ -12,6 +12,8 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.concurrent.TimeUnit;
+
 import org.atlasapi.media.common.CassandraHelper;
 import org.atlasapi.media.common.Id;
 import org.atlasapi.media.entity.Publisher;
@@ -98,7 +100,7 @@ public class CassandraTopicStoreIT {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void testResolveIds() {
+    public void testResolveIds() throws Exception {
         Topic topic1 = new Topic();
         topic1.setPublisher(Publisher.DBPEDIA);
         topic1.addAlias("dbpedia");
@@ -127,7 +129,7 @@ public class CassandraTopicStoreIT {
 
         Resolved<Topic> resolved = topicStore.resolveIds(ImmutableList.of(
             topic1id, topic2id
-        ));
+        )).get(1, TimeUnit.MINUTES);
 
         OptionalMap<Id, Topic> resolvedMap = resolved.toMap();
         assertThat(resolvedMap.get(topic1id).get().getAliases(), hasItem("dbpedia"));

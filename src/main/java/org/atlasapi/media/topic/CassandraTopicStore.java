@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
@@ -11,6 +12,7 @@ import org.atlasapi.media.common.Id;
 import org.atlasapi.media.content.CassandraPersistenceException;
 import org.atlasapi.media.entity.Publisher;
 import org.atlasapi.media.util.Resolved;
+import org.atlasapi.util.CassandraUtil;
 
 import com.google.common.base.Equivalence;
 import com.google.common.base.Function;
@@ -22,6 +24,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.metabroadcast.common.collect.ImmutableOptionalMap;
 import com.metabroadcast.common.collect.OptionalMap;
 import com.metabroadcast.common.ids.IdGenerator;
@@ -106,6 +110,13 @@ public class CassandraTopicStore extends AbstractTopicStore {
                 return topicSerializer.deserialize(input.getColumns().getColumnByName(valueColumn).getByteArrayValue());
             }
         };
+    private final Function<Rows<Long, String>, Resolved<Topic>> toResolved = 
+        new Function<Rows<Long, String>, Resolved<Topic>>() {
+            @Override
+            public Resolved<Topic> apply(Rows<Long, String> rows) {
+                return Resolved.valueOf(FluentIterable.from(rows).transform(rowToTopic));
+            }
+        };
 
     public CassandraTopicStore(AstyanaxContext<Keyspace> context, String cfName,
         ConsistencyLevel readCl, ConsistencyLevel writeCl, Equivalence<? super Topic> equivalence,
@@ -121,23 +132,21 @@ public class CassandraTopicStore extends AbstractTopicStore {
     }
 
     @Override
-    public Resolved<Topic> resolveIds(Iterable<Id> ids) {
+    public ListenableFuture<Resolved<Topic>> resolveIds(Iterable<Id> ids) {
         try {
             Iterable<Long> longIds = Iterables.transform(ids, Id.toLongValue());
-            Rows<Long, String> rows = resolveLongs(longIds);
-            return Resolved.valueOf(FluentIterable.from(rows).transform(rowToTopic));
+            return Futures.transform(resolveLongs(longIds), toResolved);
         } catch (Exception e) {
             throw new CassandraPersistenceException(Joiner.on(", ").join(ids), e);
         }
     }
 
-    private Rows<Long, String> resolveLongs(Iterable<Long> longIds) throws ConnectionException {
-        return keyspace
+    private ListenableFuture<Rows<Long, String>> resolveLongs(Iterable<Long> longIds) throws ConnectionException {
+        return Futures.transform(keyspace
             .prepareQuery(mainCf)
             .setConsistencyLevel(readConsistency)
             .getKeySlice(longIds)
-            .execute()
-            .getResult();
+            .executeAsync(), CassandraUtil.<Rows<Long, String>>toResult());
     }
 
     @Override
@@ -145,7 +154,8 @@ public class CassandraTopicStore extends AbstractTopicStore {
         try {
             Set<String> uniqueAliases = ImmutableSet.copyOf(aliases);
             List<Long> ids = resolveIdsForAliases(source, uniqueAliases);
-            Rows<Long,String> resolved = resolveLongs(ids);
+            // TODO: move timeout to config
+            Rows<Long,String> resolved = resolveLongs(ids).get(1, TimeUnit.MINUTES);
             Iterable<Topic> topics = Iterables.transform(resolved, rowToTopic);
             ImmutableMap.Builder<String, Optional<Topic>> aliasMap = ImmutableMap.builder();
             for (Topic topic : topics) {
