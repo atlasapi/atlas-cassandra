@@ -8,6 +8,7 @@ import static org.atlasapi.media.content.ContentColumn.TYPE;
 
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
@@ -166,7 +167,8 @@ public final class CassandraContentStore extends AbstractContentStore {
         try {
             Set<String> uniqueAliases = ImmutableSet.copyOf(aliases);
             List<Long> ids = resolveIdsForAliases(source, uniqueAliases);
-            Rows<Long,String> resolved = resolveLongs(ids).get();
+            // TODO: move timeout to config
+            Rows<Long,String> resolved = resolveLongs(ids).get(1, TimeUnit.MINUTES);
             Iterable<Content> contents = Iterables.transform(resolved, rowToContent);
             ImmutableMap.Builder<String, Optional<Content>> aliasMap = ImmutableMap.builder();
             for (Content content : contents) {
