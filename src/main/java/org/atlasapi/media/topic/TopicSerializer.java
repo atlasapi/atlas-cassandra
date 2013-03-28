@@ -33,6 +33,12 @@ public class TopicSerializer implements Serializer<Topic, byte[]> {
         if (topic.getThumbnail() != null) {
             msg.addThumbnail(topic.getThumbnail());
         }
+        if (topic.getNamespace() != null) {
+            msg.setNamespace(topic.getNamespace());
+        }
+        if (topic.getValue() != null) {
+            msg.setValue(topic.getValue());
+        }
         return msg.build().toByteArray();
     }
 
@@ -60,6 +66,12 @@ public class TopicSerializer implements Serializer<Topic, byte[]> {
             }
             if (msg.getThumbnailCount() > 0) {
                 topic.setThumbnail(msg.getThumbnail(0));
+            }
+            if (msg.hasNamespace()) {
+                topic.setNamespace(msg.getNamespace());
+            }
+            if (msg.hasValue()) {
+                topic.setValue(msg.getValue());
             }
             return topic;
         } catch (InvalidProtocolBufferException e) {

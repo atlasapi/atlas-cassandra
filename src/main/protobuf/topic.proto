@@ -15,4 +15,6 @@ message Topic {
     repeated common.LocaleString description = 6;
     repeated string image = 7;
     repeated string thumbnail = 8;
+    optional string namespace = 9;
+    optional string value = 10;
 }
