@@ -73,6 +73,7 @@ public class TopicSerializer implements Serializer<Topic, byte[]> {
             if (msg.hasValue()) {
                 topic.setValue(msg.getValue());
             }
+            topic.setMediaType(null);
             return topic;
         } catch (InvalidProtocolBufferException e) {
             throw Throwables.propagate(e);
