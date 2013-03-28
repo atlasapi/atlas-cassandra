@@ -65,7 +65,7 @@ public class CassandraPersistenceModule extends AbstractIdleService implements P
             .withWriteConsistency(ConsistencyLevel.CL_QUORUM)
             .build();
         this.topicStore = CassandraTopicStore.builder(context, "topics", 
-            topicEquivalence(), idGeneratorBuilder.generator("content"))
+            topicEquivalence(), idGeneratorBuilder.generator("topic"))
             .withReadConsistency(ConsistencyLevel.CL_ONE)
             .withWriteConsistency(ConsistencyLevel.CL_QUORUM)
             .build();
