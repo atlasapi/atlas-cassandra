@@ -7,6 +7,7 @@ import static org.junit.Assert.assertThat;
 import org.atlasapi.equiv.EquivalenceRef;
 import org.atlasapi.media.common.Id;
 import org.atlasapi.media.common.Serializer;
+import org.atlasapi.media.entity.Alias;
 import org.atlasapi.media.entity.Brand;
 import org.atlasapi.media.entity.Certificate;
 import org.atlasapi.media.entity.ChildRef;
@@ -140,7 +141,7 @@ public class ContentSerializerTest {
         setItemProperties(film);
         serializeAndCheck(film);
 
-        film.setReleaseDates(ImmutableSet.of(new ReleaseDate(new LocalDate(), Countries.GB, ReleaseType.GENERAL)));
+        film.setReleaseDates(ImmutableSet.of(new ReleaseDate(new LocalDate(DateTimeZones.UTC), Countries.GB, ReleaseType.GENERAL)));
         serializeAndCheck(film);
         
         film.setWebsiteUrl("web url");
@@ -301,7 +302,7 @@ public class ContentSerializerTest {
     private void setIdentifiedProperties(Identified identified) {
         identified.setId(Id.valueOf(1234));
         identified.setLastUpdated(new DateTime(DateTimeZones.UTC));
-        identified.setAliases(ImmutableSet.of("alias1","alias2"));
+        identified.setAliases(ImmutableSet.of(new Alias("a","alias1"),new Alias("b","alias2")));
         identified.setCanonicalUri("canonicalUri");
         identified.setEquivalenceUpdate(new DateTime(DateTimeZones.UTC));
         identified.setEquivalentTo(ImmutableSet.of(new EquivalenceRef(Id.valueOf(1) ,Publisher.BBC)));

@@ -4,6 +4,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
 import org.atlasapi.media.common.Id;
+import org.atlasapi.media.entity.Alias;
 import org.atlasapi.media.entity.Broadcast;
 import org.atlasapi.serialization.protobuf.ContentProtos;
 import org.joda.time.DateTime;
@@ -24,7 +25,7 @@ public class BroadcastSerializerTest {
         Broadcast broadcast = new Broadcast("channel", start, end);
         broadcast.setId(Id.valueOf(1234));
         broadcast.setCanonicalUri("uri");
-        broadcast.setAliases(ImmutableSet.of("alias1","alias2"));
+        broadcast.setAliases(ImmutableSet.of(new Alias("a","alias1"),new Alias("b","alias2")));
         broadcast.setLastUpdated(start);
         
         broadcast.setScheduleDate(null);
@@ -54,7 +55,7 @@ public class BroadcastSerializerTest {
         DateTime start = new DateTime(DateTimeZones.UTC);
         DateTime end = start.plusHours(1);
         Broadcast broadcast = new Broadcast("channel", start, end);
-        broadcast.setScheduleDate(new LocalDate());
+        broadcast.setScheduleDate(new LocalDate(DateTimeZones.UTC));
         
         ContentProtos.Broadcast serialized = serializer.serialize(broadcast).build();
         

@@ -63,10 +63,17 @@ public class CassandraHelper {
     public static void createColumnFamily(AstyanaxContext<Keyspace> context, 
               String name, Serializer<?> keySerializer,Serializer<?> colSerializer) throws ConnectionException {
         context.getEntity().createColumnFamily(
-            ColumnFamily.newColumnFamily(name, keySerializer, 
-                colSerializer),
+            ColumnFamily.newColumnFamily(name, keySerializer, colSerializer),
             ImmutableMap.<String,Object>of()
         );
+    }
+
+    public static void createColumnFamily(AstyanaxContext<Keyspace> context, 
+            String name, Serializer<?> keySerializer,Serializer<?> colSerializer, Serializer<?> valSerializer) throws ConnectionException {
+        context.getEntity().createColumnFamily(
+                ColumnFamily.newColumnFamily(name, keySerializer, colSerializer, valSerializer),
+                ImmutableMap.<String,Object>of()
+                );
     }
 
     public static void clearColumnFamily(AstyanaxContext<Keyspace> context, String cfName) throws ConnectionException {

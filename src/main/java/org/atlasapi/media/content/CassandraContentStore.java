@@ -6,13 +6,14 @@ import static org.atlasapi.media.content.ContentColumn.IDENTIFICATION;
 import static org.atlasapi.media.content.ContentColumn.SOURCE;
 import static org.atlasapi.media.content.ContentColumn.TYPE;
 
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
+import org.atlasapi.media.common.AliasIndex;
 import org.atlasapi.media.common.Id;
+import org.atlasapi.media.entity.Alias;
 import org.atlasapi.media.entity.Brand;
 import org.atlasapi.media.entity.ChildRef;
 import org.atlasapi.media.entity.EntityType;
@@ -35,7 +36,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.metabroadcast.common.collect.ImmutableOptionalMap;
@@ -48,16 +48,12 @@ import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
-import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
-import com.netflix.astyanax.query.ColumnQuery;
 import com.netflix.astyanax.query.RowQuery;
-import com.netflix.astyanax.query.RowSliceQuery;
 import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 
@@ -113,7 +109,7 @@ public final class CassandraContentStore extends AbstractContentStore {
     private final ConsistencyLevel readConsistency;
     private final ConsistencyLevel writeConsistency;
     private final ColumnFamily<Long, String> mainCf;
-    private final ColumnFamily<String, String> aliasCf;
+    private final AliasIndex aliasIndex;
     
     private final ContentMarshaller marshaller = new ProtobufContentMarshaller();
     private final Function<Row<Long, String>, Content> rowToContent =
@@ -140,8 +136,8 @@ public final class CassandraContentStore extends AbstractContentStore {
         this.writeConsistency = checkNotNull(writeConsistency);
         this.mainCf = ColumnFamily.newColumnFamily(checkNotNull(cfName),
             LongSerializer.get(), StringSerializer.get());
-        this.aliasCf = ColumnFamily.newColumnFamily(cfName+"_aliases", 
-            StringSerializer.get(), StringSerializer.get());
+        this.aliasIndex = new AliasIndex(keyspace, ColumnFamily.newColumnFamily(cfName+"_aliases", 
+            StringSerializer.get(), StringSerializer.get()));
     }
     
     @Override
@@ -163,16 +159,16 @@ public final class CassandraContentStore extends AbstractContentStore {
     }
     
     @Override
-    public OptionalMap<String, Content> resolveAliases(Iterable<String> aliases, Publisher source) {
+    public OptionalMap<Alias, Content> resolveAliases(Iterable<Alias> aliases, Publisher source) {
         try {
-            Set<String> uniqueAliases = ImmutableSet.copyOf(aliases);
-            List<Long> ids = resolveIdsForAliases(source, uniqueAliases);
+            Set<Alias> uniqueAliases = ImmutableSet.copyOf(aliases);
+            Set<Long> ids = aliasIndex.readAliases(source, uniqueAliases);
             // TODO: move timeout to config
             Rows<Long,String> resolved = resolveLongs(ids).get(1, TimeUnit.MINUTES);
             Iterable<Content> contents = Iterables.transform(resolved, rowToContent);
-            ImmutableMap.Builder<String, Optional<Content>> aliasMap = ImmutableMap.builder();
+            ImmutableMap.Builder<Alias, Optional<Content>> aliasMap = ImmutableMap.builder();
             for (Content content : contents) {
-                for (String alias : content.getAliases()) {
+                for (Alias alias : content.getAliases()) {
                     if (uniqueAliases.contains(alias)) {
                         aliasMap.put(alias, Optional.of(content));
                     }
@@ -184,23 +180,6 @@ public final class CassandraContentStore extends AbstractContentStore {
         }
     }
 
-    private List<Long> resolveIdsForAliases(Publisher source, Set<String> uniqueAliases)
-        throws ConnectionException {
-        String columnName = source.key();
-        RowSliceQuery<String, String> aliasQuery = keyspace.prepareQuery(aliasCf)
-            .getRowSlice(uniqueAliases)
-            .withColumnSlice(columnName);
-        Rows<String,String> rows = aliasQuery.execute().getResult();
-        List<Long> ids = Lists.newArrayListWithCapacity(rows.size());
-        for (Row<String, String> row : rows) {
-            Column<String> idCell = row.getColumns().getColumnByName(columnName);
-            if (idCell != null) {
-                ids.add(idCell.getLongValue());
-            }
-        }
-        return ids;
-    }
-
     @Override
     protected void doWriteContent(Content content) {
         try {
@@ -208,37 +187,34 @@ public final class CassandraContentStore extends AbstractContentStore {
             MutationBatch batch = keyspace.prepareMutationBatch();
             batch.setConsistencyLevel(writeConsistency);
             marshaller.marshallInto(batch.withRow(mainCf, id), content);
-            for (String alias : content.getAliases()) {
-                batch.withRow(aliasCf, alias)
-                    .putColumn(content.getPublisher().key(), id);
-            }
+            aliasIndex.writeAliases(batch, id, content.getPublisher(), content.getAliases());
             batch.execute();
         } catch (Exception e) {
             throw new CassandraPersistenceException(content.toString(), e);
         }
     }
-
+    
     @Override
-    @Nullable
-    protected Content resolveAlias(String alias, Publisher source) {
-        try {
-            ColumnQuery<String> query = keyspace.prepareQuery(aliasCf)
-                .getKey(alias)
-                .getColumn(source.key());
-            Column<String> idCol = query.execute().getResult();
-            long id = idCol.getLongValue();
-            return resolve(id, null);
-        } catch (NotFoundException e) {
-            return null;
-        } catch (Exception e) {
-            throw Throwables.propagate(e);
+    protected @Nullable
+    Content resolvePrevious(@Nullable Id id, Publisher source, Set<Alias> aliases) {
+        Content previous = null;
+        if (id != null) {
+            previous = resolve(id.longValue(), null);
         }
-    }
-
-    @Override
-    @Nullable
-    protected Content resolveId(Id id) {
-        return resolve(id.longValue(), null);
+        
+        if (previous == null) {
+            try {
+                Set<Long> ids = aliasIndex.readAliases(source, aliases);
+                Long aliasId = Iterables.getFirst(ids, null);
+                if (aliasId != null) {
+                    previous = resolve(aliasId, null);
+                }
+            } catch (ConnectionException e) {
+                throw Throwables.propagate(e);
+            }
+        }
+        
+        return previous;
     }
 
     private Content resolve(long longId, Set<ContentColumn> colNames) {

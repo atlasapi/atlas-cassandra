@@ -6,12 +6,13 @@ import org.atlasapi.media.entity.ReleaseDate.ReleaseType;
 import org.atlasapi.serialization.protobuf.ContentProtos;
 
 import com.metabroadcast.common.intl.Countries;
+import com.metabroadcast.common.time.DateTimeZones;
 
 public class ReleaseDateSerializer {
 
     public ContentProtos.ReleaseDate serialize(ReleaseDate releaseDate) {
         ContentProtos.ReleaseDate.Builder date = ContentProtos.ReleaseDate.newBuilder();
-        date.setDate(ProtoBufUtils.serializeDateTime(releaseDate.date().toDateTimeAtStartOfDay()));
+        date.setDate(ProtoBufUtils.serializeDateTime(releaseDate.date().toDateTimeAtStartOfDay(DateTimeZones.UTC)));
         date.setCountry(releaseDate.country().code());
         date.setType(releaseDate.type().toString());
         return date.build();

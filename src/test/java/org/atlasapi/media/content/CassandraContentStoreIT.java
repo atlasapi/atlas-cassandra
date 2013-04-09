@@ -19,6 +19,7 @@ import java.util.concurrent.TimeoutException;
 
 import org.atlasapi.media.common.CassandraHelper;
 import org.atlasapi.media.common.Id;
+import org.atlasapi.media.entity.Alias;
 import org.atlasapi.media.entity.Brand;
 import org.atlasapi.media.entity.EntityType;
 import org.atlasapi.media.entity.Episode;
@@ -71,7 +72,7 @@ public class CassandraContentStoreIT {
         context.start();
         CassandraHelper.createKeyspace(context);
         CassandraHelper.createColumnFamily(context, "Content", LongSerializer.get(), StringSerializer.get());
-        CassandraHelper.createColumnFamily(context, "Content_aliases", StringSerializer.get(), StringSerializer.get());
+        CassandraHelper.createColumnFamily(context, "Content_aliases", StringSerializer.get(), StringSerializer.get(), LongSerializer.get());
     }
     
     @AfterClass
@@ -184,12 +185,12 @@ public class CassandraContentStoreIT {
 
         Item bbcItem = new Item();
         bbcItem.setPublisher(Publisher.BBC);
-        bbcItem.addAlias("shared Alias");
+        bbcItem.addAlias(new Alias("shared", "alias"));
         bbcItem.setTitle("title");
 
         Item c4Item = new Item();
         c4Item.setPublisher(Publisher.C4);
-        c4Item.addAlias("shared Alias");
+        c4Item.addAlias(new Alias("shared", "alias"));
 
         when(clock.now()).thenReturn(new DateTime(DateTimeZones.UTC));
         when(idGenerator.generateRaw())
@@ -477,33 +478,36 @@ public class CassandraContentStoreIT {
     public void testResolvingByAlias() {
         
         DateTime now = new DateTime(DateTimeZones.UTC);
+
+        Alias bbcBrandAlias = new Alias("brand", "alias");
+        Alias bbcSeriesAlias = new Alias("series", "alias");
         
         Brand brand = create(new Brand());
-        brand.addAlias("bbcBrandAlias");
+        brand.addAlias(bbcBrandAlias);
 
         when(clock.now()).thenReturn(now);
         when(idGenerator.generateRaw()).thenReturn(1234L);
         store.writeContent(brand);
         
-        OptionalMap<String, Content> resolved = store.resolveAliases(
-                ImmutableSet.of("bbcBrandAlias", "bbcSeriesAlias"), Publisher.BBC);
+        OptionalMap<Alias, Content> resolved = store.resolveAliases(
+                ImmutableSet.of(bbcBrandAlias, bbcSeriesAlias), Publisher.BBC);
         
         assertThat(resolved.size(), is(1));
-        assertThat(resolved.get("bbcBrandAlias").get().getId(), is(Id.valueOf(1234L)));
+        assertThat(resolved.get(bbcBrandAlias).get().getId(), is(Id.valueOf(1234L)));
         
         Series series = create(new Series());
-        series.addAlias("bbcSeriesAlias");
+        series.addAlias(bbcSeriesAlias);
         
         when(clock.now()).thenReturn(now);
         when(idGenerator.generateRaw()).thenReturn(1235L);
         store.writeContent(series);
         
         resolved = store.resolveAliases(
-            ImmutableSet.of("bbcBrandAlias", "bbcSeriesAlias"), Publisher.BBC);
+            ImmutableSet.of(bbcBrandAlias, bbcSeriesAlias), Publisher.BBC);
         
         assertThat(resolved.size(), is(2));
-        assertThat(resolved.get("bbcBrandAlias").get().getId(), is(Id.valueOf(1234L)));
-        assertThat(resolved.get("bbcSeriesAlias").get().getId(), is(Id.valueOf(1235L)));
+        assertThat(resolved.get(bbcBrandAlias).get().getId(), is(Id.valueOf(1234L)));
+        assertThat(resolved.get(bbcSeriesAlias).get().getId(), is(Id.valueOf(1235L)));
         
     }
 
@@ -513,11 +517,12 @@ public class CassandraContentStoreIT {
         DateTime now = new DateTime(DateTimeZones.UTC);
         
         Brand bbcBrand = create(new Brand());
-        bbcBrand.addAlias("shared alias");
+        Alias sharedAlias = new Alias("shared", "alias");
+        bbcBrand.addAlias(sharedAlias);
         
         Brand c4Brand = create(new Brand());
         c4Brand.setPublisher(Publisher.C4);
-        c4Brand.addAlias("shared alias");
+        c4Brand.addAlias(sharedAlias);
         
         when(clock.now()).thenReturn(now);
         when(idGenerator.generateRaw()).thenReturn(1234L);
@@ -527,17 +532,17 @@ public class CassandraContentStoreIT {
         when(idGenerator.generateRaw()).thenReturn(1235L);
         store.writeContent(c4Brand);
         
-        OptionalMap<String, Content> resolved = store.resolveAliases(
-            ImmutableSet.of("shared alias"), Publisher.BBC);
+        OptionalMap<Alias, Content> resolved = store.resolveAliases(
+            ImmutableSet.of(sharedAlias), Publisher.BBC);
         
         assertThat(resolved.size(), is(1));
-        assertThat(resolved.get("shared alias").get().getId(), is(Id.valueOf(1234L)));
+        assertThat(resolved.get(sharedAlias).get().getId(), is(Id.valueOf(1234L)));
         
         resolved = store.resolveAliases(
-            ImmutableSet.of("shared alias"), Publisher.C4);
+            ImmutableSet.of(sharedAlias), Publisher.C4);
         
         assertThat(resolved.size(), is(1));
-        assertThat(resolved.get("shared alias").get().getId(), is(Id.valueOf(1235L)));
+        assertThat(resolved.get(sharedAlias).get().getId(), is(Id.valueOf(1235L)));
         
     }
 

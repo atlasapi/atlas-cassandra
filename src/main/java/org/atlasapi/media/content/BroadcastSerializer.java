@@ -8,6 +8,8 @@ import org.atlasapi.media.entity.Broadcast;
 import org.atlasapi.serialization.protobuf.ContentProtos;
 import org.atlasapi.serialization.protobuf.ContentProtos.Broadcast.Builder;
 
+import com.metabroadcast.common.time.DateTimeZones;
+
 public class BroadcastSerializer {
 
     private final IdentifiedSerializer identifiedSerializer = new IdentifiedSerializer();
@@ -19,7 +21,7 @@ public class BroadcastSerializer {
         builder.setTransmissionTime(serializeDateTime(broadcast.getTransmissionTime()));
         builder.setTransmissionEndTime(serializeDateTime(broadcast.getTransmissionEndTime()));
         if (broadcast.getScheduleDate() != null) {
-            builder.setScheduleDate(serializeDateTime(broadcast.getScheduleDate().toDateTimeAtStartOfDay()));
+            builder.setScheduleDate(serializeDateTime(broadcast.getScheduleDate().toDateTimeAtStartOfDay(DateTimeZones.UTC)));
         }
         if (broadcast.getSourceId() != null) {
             builder.setSourceId(broadcast.getSourceId());

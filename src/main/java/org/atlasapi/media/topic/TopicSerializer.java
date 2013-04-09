@@ -1,6 +1,7 @@
 package org.atlasapi.media.topic;
 
 import org.atlasapi.media.common.Serializer;
+import org.atlasapi.media.entity.Alias;
 import org.atlasapi.media.entity.Publisher;
 import org.atlasapi.media.topic.Topic.Type;
 import org.atlasapi.serialization.protobuf.TopicProtos;
@@ -18,8 +19,10 @@ public class TopicSerializer implements Serializer<Topic, byte[]> {
             .setId(topic.getId().longValue())
             .setSource(topic.getPublisher().key())
             .setType(topic.getType().key());
-        for (String alias : topic.getAliases()) {
-            msg.addAliasesBuilder().setValue(alias);
+        for (Alias alias : topic.getAliases()) {
+            msg.addAliasesBuilder()
+                .setNamespace(alias.getNamespace())
+                .setValue(alias.getValue());
         }
         if (topic.getTitle() != null) {
             msg.addTitleBuilder().setValue(topic.getTitle());
@@ -33,12 +36,6 @@ public class TopicSerializer implements Serializer<Topic, byte[]> {
         if (topic.getThumbnail() != null) {
             msg.addThumbnail(topic.getThumbnail());
         }
-        if (topic.getNamespace() != null) {
-            msg.setNamespace(topic.getNamespace());
-        }
-        if (topic.getValue() != null) {
-            msg.setValue(topic.getValue());
-        }
         return msg.build().toByteArray();
     }
 
@@ -50,9 +47,9 @@ public class TopicSerializer implements Serializer<Topic, byte[]> {
             Topic topic = new Topic(msg.getId());
             topic.setPublisher(Publisher.fromKey(msg.getSource()).requireValue());
             topic.setType(Type.fromKey(msg.getType()));
-            ImmutableList.Builder<String> aliases = ImmutableList.builder();
+            ImmutableList.Builder<Alias> aliases = ImmutableList.builder();
             for (int i = 0; i < msg.getAliasesCount(); i++) {
-                aliases.add(msg.getAliases(i).getValue());
+                aliases.add(new Alias(msg.getAliases(i).getNamespace(), msg.getAliases(i).getValue()));
             }
             topic.setAliases(aliases.build());
             if (msg.getTitleCount() > 0) {
@@ -66,12 +63,6 @@ public class TopicSerializer implements Serializer<Topic, byte[]> {
             }
             if (msg.getThumbnailCount() > 0) {
                 topic.setThumbnail(msg.getThumbnail(0));
-            }
-            if (msg.hasNamespace()) {
-                topic.setNamespace(msg.getNamespace());
-            }
-            if (msg.hasValue()) {
-                topic.setValue(msg.getValue());
             }
             topic.setMediaType(null);
             return topic;

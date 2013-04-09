@@ -5,6 +5,7 @@ import static org.atlasapi.media.common.ProtoBufUtils.deserializeDateTime;
 import org.atlasapi.equiv.EquivalenceRef;
 import org.atlasapi.media.common.Id;
 import org.atlasapi.media.common.ProtoBufUtils;
+import org.atlasapi.media.entity.Alias;
 import org.atlasapi.media.entity.Brand;
 import org.atlasapi.media.entity.Certificate;
 import org.atlasapi.media.entity.ChildRef;
@@ -30,7 +31,7 @@ import org.atlasapi.media.entity.Song;
 import org.atlasapi.media.entity.Specialization;
 import org.atlasapi.media.entity.Subtitles;
 import org.atlasapi.media.entity.TopicRef;
-import org.atlasapi.serialization.protobuf.CommonProtos.Alias;
+import org.atlasapi.serialization.protobuf.CommonProtos;
 import org.atlasapi.serialization.protobuf.CommonProtos.Reference;
 import org.atlasapi.serialization.protobuf.ContentProtos;
 import org.atlasapi.serialization.protobuf.ContentProtos.Subtitle;
@@ -71,9 +72,9 @@ public class ContentDeserializationVisitor implements ContentVisitor<Content> {
             identified.setLastUpdated(deserializeDateTime(msg.getLastUpdated()));
         }
 
-        Builder<String> aliases = ImmutableSet.builder();
-        for (Alias alias : msg.getAliasesList()) {
-            aliases.add(alias.getValue());
+        Builder<Alias> aliases = ImmutableSet.builder();
+        for (CommonProtos.Alias alias : msg.getAliasesList()) {
+            aliases.add(new Alias(alias.getNamespace(), alias.getValue()));
         }
         identified.setAliases(aliases.build());
         

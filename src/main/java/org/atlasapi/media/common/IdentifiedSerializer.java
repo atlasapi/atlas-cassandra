@@ -5,8 +5,8 @@ import static org.atlasapi.media.common.ProtoBufUtils.deserializeDateTime;
 import org.atlasapi.equiv.EquivalenceRef;
 import org.atlasapi.media.entity.Identified;
 import org.atlasapi.media.entity.Publisher;
+import org.atlasapi.media.entity.Alias;
 import org.atlasapi.serialization.protobuf.CommonProtos;
-import org.atlasapi.serialization.protobuf.CommonProtos.Alias;
 import org.atlasapi.serialization.protobuf.CommonProtos.Reference;
 import org.joda.time.DateTime;
 
@@ -28,8 +28,10 @@ public class IdentifiedSerializer {
         if (identified.getCanonicalUri() != null) {
             id.setUri(identified.getCanonicalUri());
         }
-        for (String alias : identified.getAliases()) {
-            id.addAliases(Alias.newBuilder().setValue(alias));
+        for (Alias alias : identified.getAliases()) {
+            id.addAliases(CommonProtos.Alias.newBuilder()
+                    .setNamespace(alias.getNamespace())
+                    .setValue(alias.getValue()));
         }
         for (EquivalenceRef equivRef : identified.getEquivalentTo()) {
             id.addEquivs(CommonProtos.Reference.newBuilder()
@@ -52,9 +54,9 @@ public class IdentifiedSerializer {
             identified.setLastUpdated(lastUpdated);
         }
 
-        Builder<String> aliases = ImmutableSet.builder();
-        for (Alias alias : msg.getAliasesList()) {
-            aliases.add(alias.getValue());
+        Builder<Alias> aliases = ImmutableSet.builder();
+        for (CommonProtos.Alias alias : msg.getAliasesList()) {
+            aliases.add(new Alias(alias.getNamespace(), alias.getValue()));
         }
         identified.setAliases(aliases.build());
         

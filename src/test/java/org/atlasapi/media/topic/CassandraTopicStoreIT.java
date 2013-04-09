@@ -16,6 +16,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.atlasapi.media.common.CassandraHelper;
 import org.atlasapi.media.common.Id;
+import org.atlasapi.media.entity.Alias;
 import org.atlasapi.media.entity.Publisher;
 import org.atlasapi.media.topic.Topic.Type;
 import org.atlasapi.media.util.Resolved;
@@ -103,12 +104,12 @@ public class CassandraTopicStoreIT {
     public void testResolveIds() throws Exception {
         Topic topic1 = new Topic();
         topic1.setPublisher(Publisher.DBPEDIA);
-        topic1.addAlias("dbpedia");
+        topic1.addAlias(new Alias("dbpedia", "alias"));
         topic1.setType(Type.UNKNOWN);
 
         Topic topic2 = new Topic();
         topic2.setPublisher(Publisher.METABROADCAST);
-        topic2.addAlias("mbst");
+        topic2.addAlias(new Alias("mbst", "alias"));
         topic2.setType(Type.UNKNOWN);
 
         DateTime now = new DateTime(DateTimeZones.UTC);
@@ -132,20 +133,22 @@ public class CassandraTopicStoreIT {
         )).get(1, TimeUnit.MINUTES);
 
         OptionalMap<Id, Topic> resolvedMap = resolved.toMap();
-        assertThat(resolvedMap.get(topic1id).get().getAliases(), hasItem("dbpedia"));
-        assertThat(resolvedMap.get(topic2id).get().getAliases(), hasItem("mbst"));
+        assertThat(resolvedMap.get(topic1id).get().getAliases(), hasItem(new Alias("dbpedia", "alias")));
+        assertThat(resolvedMap.get(topic2id).get().getAliases(), hasItem(new Alias("mbst", "alias")));
     }
 
     @Test
     public void testResolveAliases() {
+        Alias sharedAlias = new Alias("shared", "alias");
+
         Topic topic1 = new Topic();
         topic1.setPublisher(Publisher.DBPEDIA);
-        topic1.addAlias("shared");
+        topic1.addAlias(sharedAlias);
         topic1.setType(Type.UNKNOWN);
 
         Topic topic2 = new Topic();
         topic2.setPublisher(Publisher.METABROADCAST);
-        topic2.addAlias("shared");
+        topic2.addAlias(sharedAlias);
         topic2.setType(Type.UNKNOWN);
 
         DateTime now = new DateTime(DateTimeZones.UTC);
@@ -155,17 +158,17 @@ public class CassandraTopicStoreIT {
         topicStore.writeTopic(topic1);
         topicStore.writeTopic(topic2);
 
-        OptionalMap<String, Topic> resolved = topicStore.resolveAliases(
-            ImmutableList.of("shared"), Publisher.METABROADCAST);
+        OptionalMap<Alias, Topic> resolved = topicStore.resolveAliases(
+            ImmutableList.of(sharedAlias), Publisher.METABROADCAST);
         assertThat(resolved.size(), is(1));
-        Topic topic = resolved.get("shared").get();
+        Topic topic = resolved.get(sharedAlias).get();
         assertThat(topic.getPublisher(), is(Publisher.METABROADCAST));
         assertThat(topic.getId(), is(Id.valueOf(1235)));
 
         resolved = topicStore.resolveAliases(
-            ImmutableList.of("shared"), Publisher.DBPEDIA);
+            ImmutableList.of(sharedAlias), Publisher.DBPEDIA);
         assertThat(resolved.size(), is(1));
-        topic = resolved.get("shared").get();
+        topic = resolved.get(sharedAlias).get();
         assertThat(topic.getPublisher(), is(Publisher.DBPEDIA));
         assertThat(topic.getId(), is(Id.valueOf(1234)));
 
@@ -175,7 +178,7 @@ public class CassandraTopicStoreIT {
     public void testDoesntRewriteTopicWhenEquivalentToPrevious() {
         Topic topic1 = new Topic();
         topic1.setPublisher(Publisher.DBPEDIA);
-        topic1.addAlias("shared");
+        topic1.addAlias(new Alias("shared", "alias"));
         topic1.setType(Type.UNKNOWN);
 
         DateTime now = new DateTime(DateTimeZones.UTC);

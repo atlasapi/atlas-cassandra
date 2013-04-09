@@ -2,6 +2,7 @@ package org.atlasapi.media.content;
 
 import org.atlasapi.equiv.EquivalenceRef;
 import org.atlasapi.media.common.ProtoBufUtils;
+import org.atlasapi.media.entity.Alias;
 import org.atlasapi.media.entity.Brand;
 import org.atlasapi.media.entity.Certificate;
 import org.atlasapi.media.entity.ChildRef;
@@ -24,7 +25,6 @@ import org.atlasapi.media.entity.Song;
 import org.atlasapi.media.entity.Subtitles;
 import org.atlasapi.media.entity.TopicRef;
 import org.atlasapi.serialization.protobuf.CommonProtos;
-import org.atlasapi.serialization.protobuf.CommonProtos.Alias;
 import org.atlasapi.serialization.protobuf.CommonProtos.Reference;
 import org.atlasapi.serialization.protobuf.ContentProtos;
 import org.atlasapi.serialization.protobuf.ContentProtos.Content.Builder;
@@ -56,8 +56,10 @@ final class ContentSerializationVisitor implements ContentVisitor<Builder> {
         if (ided.getCanonicalUri() != null) {
             builder.setUri(ided.getCanonicalUri());
         }
-        for (String alias : ided.getAliases()) {
-            builder.addAliases(Alias.newBuilder().setValue(alias));
+        for (Alias alias : ided.getAliases()) {
+            builder.addAliases(CommonProtos.Alias.newBuilder()
+                    .setNamespace(alias.getNamespace())
+                    .setValue(alias.getValue()));
         }
         for (EquivalenceRef equivRef : ided.getEquivalentTo()) {
             builder.addEquivs(CommonProtos.Reference.newBuilder()

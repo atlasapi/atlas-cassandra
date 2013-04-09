@@ -1,8 +1,9 @@
 package org.atlasapi.media.topic;
 
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertThat;
 
+import org.atlasapi.media.entity.Alias;
 import org.atlasapi.media.entity.Publisher;
 import org.atlasapi.media.topic.Topic.Type;
 import org.junit.Test;
@@ -17,7 +18,7 @@ public class TopicSerializerTest {
         topic.setPublisher(Publisher.DBPEDIA);
         topic.setType(Type.PERSON);
         serializeAndCheck(topic);
-        topic.addAlias("alias");
+        topic.addAlias(new Alias("a","alias1"));
         serializeAndCheck(topic);
         topic.setTitle("Jim");
         serializeAndCheck(topic);

@@ -8,8 +8,10 @@ import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
+import org.atlasapi.media.common.AliasIndex;
 import org.atlasapi.media.common.Id;
 import org.atlasapi.media.content.CassandraPersistenceException;
+import org.atlasapi.media.entity.Alias;
 import org.atlasapi.media.entity.Publisher;
 import org.atlasapi.media.util.Resolved;
 import org.atlasapi.util.CassandraUtil;
@@ -99,7 +101,7 @@ public class CassandraTopicStore extends AbstractTopicStore {
     private final ConsistencyLevel readConsistency;
     private final ConsistencyLevel writeConsistency;
     private final ColumnFamily<Long, String> mainCf;
-    private final ColumnFamily<String, String> aliasCf;
+    private final AliasIndex aliasIndex;
     
     private final String valueColumn = "topic";
     private final TopicSerializer topicSerializer = new TopicSerializer();
@@ -127,8 +129,8 @@ public class CassandraTopicStore extends AbstractTopicStore {
         this.writeConsistency = checkNotNull(writeCl);
         this.mainCf = ColumnFamily.newColumnFamily(checkNotNull(cfName),
             LongSerializer.get(), StringSerializer.get());
-        this.aliasCf = ColumnFamily.newColumnFamily(cfName+"_aliases", 
-            StringSerializer.get(), StringSerializer.get());
+        this.aliasIndex = new AliasIndex(keyspace, ColumnFamily.newColumnFamily(cfName+"_aliases", 
+            StringSerializer.get(), StringSerializer.get()));
     }
 
     @Override
@@ -150,16 +152,16 @@ public class CassandraTopicStore extends AbstractTopicStore {
     }
 
     @Override
-    public OptionalMap<String, Topic> resolveAliases(Iterable<String> aliases, Publisher source) {
+    public OptionalMap<Alias, Topic> resolveAliases(Iterable<Alias> aliases, Publisher source) {
         try {
-            Set<String> uniqueAliases = ImmutableSet.copyOf(aliases);
-            List<Long> ids = resolveIdsForAliases(source, uniqueAliases);
+            Set<Alias> uniqueAliases = ImmutableSet.copyOf(aliases);
+            Set<Long> ids = aliasIndex.readAliases(source, uniqueAliases);
             // TODO: move timeout to config
             Rows<Long,String> resolved = resolveLongs(ids).get(1, TimeUnit.MINUTES);
             Iterable<Topic> topics = Iterables.transform(resolved, rowToTopic);
-            ImmutableMap.Builder<String, Optional<Topic>> aliasMap = ImmutableMap.builder();
+            ImmutableMap.Builder<Alias, Optional<Topic>> aliasMap = ImmutableMap.builder();
             for (Topic topic : topics) {
-                for (String alias : topic.getAliases()) {
+                for (Alias alias : topic.getAliases()) {
                     if (uniqueAliases.contains(alias)) {
                         aliasMap.put(alias, Optional.of(topic));
                     }
@@ -171,23 +173,6 @@ public class CassandraTopicStore extends AbstractTopicStore {
         }
     }
     
-    private List<Long> resolveIdsForAliases(Publisher source, Set<String> uniqueAliases)
-        throws ConnectionException {
-        String columnName = source.key();
-        RowSliceQuery<String, String> aliasQuery = keyspace.prepareQuery(aliasCf)
-            .getRowSlice(uniqueAliases)
-            .withColumnSlice(columnName);
-        Rows<String,String> rows = aliasQuery.execute().getResult();
-        List<Long> ids = Lists.newArrayListWithCapacity(rows.size());
-        for (Row<String, String> row : rows) {
-            Column<String> idCell = row.getColumns().getColumnByName(columnName);
-            if (idCell != null) {
-                ids.add(idCell.getLongValue());
-            }
-        }
-        return ids;
-    }
-
     @Override
     protected void doWrite(Topic topic) {
         try {
@@ -196,10 +181,7 @@ public class CassandraTopicStore extends AbstractTopicStore {
             batch.setConsistencyLevel(writeConsistency);
             batch.withRow(mainCf, id)
                 .putColumn(valueColumn, topicSerializer.serialize(topic));
-            for (String alias : topic.getAliases()) {
-                batch.withRow(aliasCf, alias)
-                    .putColumn(topic.getPublisher().key(), id);
-            }
+            aliasIndex.writeAliases(batch, id, topic.getPublisher(), topic.getAliases());
             batch.execute();
         } catch (Exception e) {
             throw new CassandraPersistenceException(topic.toString(), e);
@@ -208,23 +190,24 @@ public class CassandraTopicStore extends AbstractTopicStore {
 
     @Override
     @Nullable
-    protected Topic doResolveId(Id id) {
-        return resolve(id.longValue());
-    }
-
-    @Override
-    @Nullable
-    protected Topic doResolveAlias(String alias, Publisher source) {
-        try {
-            ColumnQuery<String> query = keyspace.prepareQuery(aliasCf)
-                .getKey(alias).getColumn(source.key());
-            Column<String> idCol = query.execute().getResult();
-            return resolve(idCol.getLongValue());
-        } catch (NotFoundException e) {
-            return null;
-        } catch (Exception e) {
-            throw Throwables.propagate(e);
+    protected Topic resolvePrevious(@Nullable Id id, Publisher source, Set<Alias> aliases) {
+        Topic previous = null;
+        if (id != null) {
+            previous = resolve(id.longValue());
         }
+        
+        if (previous == null) {
+            try {
+                Set<Long> ids = aliasIndex.readAliases(source, aliases);
+                Long aliasId = Iterables.getFirst(ids, null);
+                if (aliasId != null) {
+                    previous = resolve(aliasId);
+                }
+            } catch (ConnectionException e) {
+                throw Throwables.propagate(e);
+            }
+        }
+        return previous;
     }
 
     private Topic resolve(long longId) {
