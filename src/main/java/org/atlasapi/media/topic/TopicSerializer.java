@@ -17,8 +17,10 @@ public class TopicSerializer implements Serializer<Topic, byte[]> {
     public byte[] serialize(Topic topic) {
         Builder msg = TopicProtos.Topic.newBuilder()
             .setId(topic.getId().longValue())
-            .setSource(topic.getPublisher().key())
-            .setType(topic.getType().key());
+            .setSource(topic.getPublisher().key());
+        if (topic.getType() != null) {
+            msg.setType(topic.getType().key());
+        }
         for (Alias alias : topic.getAliases()) {
             msg.addAliasesBuilder()
                 .setNamespace(alias.getNamespace())
@@ -46,7 +48,9 @@ public class TopicSerializer implements Serializer<Topic, byte[]> {
             msg = TopicProtos.Topic.parseFrom(bytes);
             Topic topic = new Topic(msg.getId());
             topic.setPublisher(Publisher.fromKey(msg.getSource()).requireValue());
-            topic.setType(Type.fromKey(msg.getType()));
+            if (msg.hasType()) {
+                topic.setType(Type.fromKey(msg.getType()));
+            }
             ImmutableList.Builder<Alias> aliases = ImmutableList.builder();
             for (int i = 0; i < msg.getAliasesCount(); i++) {
                 aliases.add(new Alias(msg.getAliases(i).getNamespace(), msg.getAliases(i).getValue()));
