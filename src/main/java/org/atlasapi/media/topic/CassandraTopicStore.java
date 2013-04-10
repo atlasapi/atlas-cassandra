@@ -20,6 +20,7 @@ import com.google.common.base.Equivalence;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
+import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableMap;
@@ -40,6 +41,7 @@ import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
+import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
@@ -109,14 +111,19 @@ public class CassandraTopicStore extends AbstractTopicStore {
         new Function<Row<Long, String>, Topic>() {
             @Override
             public Topic apply(Row<Long, String> input) {
-                return topicSerializer.deserialize(input.getColumns().getColumnByName(valueColumn).getByteArrayValue());
+                ColumnList<String> cols = input.getColumns();
+                Column<String> col = cols.getColumnByName(valueColumn);
+                if (col == null) {
+                    return null;
+                }
+                return topicSerializer.deserialize(col.getByteArrayValue());
             }
         };
     private final Function<Rows<Long, String>, Resolved<Topic>> toResolved = 
         new Function<Rows<Long, String>, Resolved<Topic>>() {
             @Override
             public Resolved<Topic> apply(Rows<Long, String> rows) {
-                return Resolved.valueOf(FluentIterable.from(rows).transform(rowToTopic));
+                return Resolved.valueOf(FluentIterable.from(rows).transform(rowToTopic).filter(Predicates.notNull()));
             }
         };
 
