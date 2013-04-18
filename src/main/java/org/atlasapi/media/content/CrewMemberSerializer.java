@@ -10,10 +10,16 @@ import com.google.common.collect.ImmutableSet;
 public class CrewMemberSerializer {
 
     public ContentProtos.CrewMember serialize(CrewMember crew) {
-        ContentProtos.CrewMember.Builder crewMember = ContentProtos.CrewMember.newBuilder()
-            .setUri(crew.getCanonicalUri())
-            .setRole(crew.role().key())
-            .setName(crew.name());
+        ContentProtos.CrewMember.Builder crewMember = ContentProtos.CrewMember.newBuilder();
+        if (crew.getCanonicalUri() != null) {
+            crewMember.setUri(crew.getCanonicalUri());
+        }
+        if (crew.role() != null) {
+            crewMember.setRole(crew.role().key());
+        }
+        if (crew.name() != null) {
+            crewMember.setName(crew.name());
+        }
         if (crew instanceof Actor) {
             crewMember.setCharacter(((Actor) crew).character());
         }
