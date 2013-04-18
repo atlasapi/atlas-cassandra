@@ -235,8 +235,15 @@ public final class CassandraContentStore extends AbstractContentStore {
 
     @Override
     protected ContainerSummary summarize(ParentRef id) {
-        return summarize((Container)resolve(id.getId().longValue(), 
-            ImmutableSet.of(TYPE, SOURCE, IDENTIFICATION, DESCRIPTION)));
+        Content resolved = resolve(id.getId().longValue(), 
+            ImmutableSet.of(TYPE, SOURCE, IDENTIFICATION, DESCRIPTION));
+        if (resolved instanceof Container) {
+            return summarize((Container)resolved);
+        } else  if (resolved == null) {
+            return null;
+        } else {
+            throw new IllegalStateException(String.format("Content for parent %s not Container", id));
+        }
     }
 
     private ContainerSummary summarize(Container container) {
