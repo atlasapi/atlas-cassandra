@@ -21,8 +21,12 @@ public class CrewMemberSerializer {
             crewMember.setName(crew.name());
         }
         if (crew instanceof Actor) {
-            crewMember.setCharacter(((Actor) crew).character());
+            String character = ((Actor) crew).character();
+            if (character != null) {
+                crewMember.setCharacter(character);
+            }
         }
+        crewMember.addAllProfileLinks(crew.profileLinks());
         return crewMember.build();
     }
 

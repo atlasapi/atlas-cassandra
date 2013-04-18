@@ -9,6 +9,8 @@ import org.atlasapi.media.entity.CrewMember;
 import org.atlasapi.media.entity.Publisher;
 import org.junit.Test;
 
+import com.google.common.collect.ImmutableSet;
+
 
 public class CrewMemberSerializerTest {
 
@@ -16,7 +18,9 @@ public class CrewMemberSerializerTest {
     
     @Test
     public void testDeSerializeCrewMember() {
-        CrewMember member = CrewMember.crewMember("id", "Jim", "director", Publisher.BBC);
+        CrewMember member = CrewMember
+                .crewMember("id", "Jim", "director", Publisher.BBC)
+                .withProfileLinks(ImmutableSet.of("linkOne","linkTwo"));
         
         CrewMember deserialized = serializer.deserialize(serializer.serialize(member));
         
