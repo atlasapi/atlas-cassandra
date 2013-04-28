@@ -29,6 +29,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
+import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.FluentIterable;
@@ -116,14 +117,17 @@ public final class CassandraContentStore extends AbstractContentStore {
         new Function<Row<Long, String>, Content>() {
             @Override
             public Content apply(Row<Long, String> input) {
-                return marshaller.unmarshallCols(input.getColumns());
+                if (input.getColumns().size() > 0) {
+                    return marshaller.unmarshallCols(input.getColumns());
+                }
+                return null;
             }
         };
     private final Function<Rows<Long, String>, Resolved<Content>> toResolvedContent = 
         new Function<Rows<Long, String>, Resolved<Content>>() {
             @Override
             public Resolved<Content> apply(Rows<Long, String> rows) {
-                return Resolved.valueOf(FluentIterable.from(rows).transform(rowToContent));
+                return Resolved.valueOf(FluentIterable.from(rows).transform(rowToContent).filter(Predicates.notNull()));
             }
         };
 

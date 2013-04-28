@@ -37,9 +37,11 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.runners.MockitoJUnitRunner;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.metabroadcast.common.collect.OptionalMap;
 import com.metabroadcast.common.ids.IdGenerator;
 import com.metabroadcast.common.time.Clock;
@@ -544,6 +546,24 @@ public class CassandraContentStoreIT {
         assertThat(resolved.size(), is(1));
         assertThat(resolved.get(sharedAlias).get().getId(), is(Id.valueOf(1235L)));
         
+    }
+    
+    @Test
+    public void testResolvingMissingContentReturnsEmptyResolved() throws Exception {
+        
+        ListenableFuture<Resolved<Content>> resolved = store.resolveIds(ImmutableSet.of(Id.valueOf(4321)));
+        
+        assertTrue(resolved.get(1, TimeUnit.SECONDS).getResources().isEmpty());
+        
+    }
+    
+    @Test
+    public void testResolvingMissingContentByAliasReturnsNothing() throws Exception {
+        
+        Alias alias = new Alias("missing","alias");
+        OptionalMap<Alias,Content> resolveAliases = store.resolveAliases(ImmutableList.of(alias), Publisher.BBC);
+        
+        assertThat(resolveAliases.get(alias), is(Optional.<Content>absent()));
     }
 
     private <T extends Content> T create(T content) {

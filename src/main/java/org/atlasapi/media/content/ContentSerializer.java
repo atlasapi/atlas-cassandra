@@ -47,9 +47,6 @@ public final class ContentSerializer implements Serializer<Content, ContentProto
         this.typeNameMap = typeNameMap.build();
     }
 
-    /* (non-Javadoc)
-     * @see org.atlasapi.media.content.Serializer#serialize(org.atlasapi.media.content.Content)
-     */
     @Override
     public ContentProtos.Content serialize(Content content) {
         String type = typeString(content.getClass());
@@ -62,9 +59,6 @@ public final class ContentSerializer implements Serializer<Content, ContentProto
         return cls.getSimpleName().toLowerCase();
     }
 
-    /* (non-Javadoc)
-     * @see org.atlasapi.media.content.Serializer#deserialize(org.atlasapi.serialization.protobuf.ContentProtos.Content)
-     */
     @Override
     public Content deserialize(ContentProtos.Content p) {
         try {
