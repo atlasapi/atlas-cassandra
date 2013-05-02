@@ -3,7 +3,9 @@ package org.atlasapi.media.topic;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.isA;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.argThat;
 import static org.mockito.Mockito.mock;
@@ -198,6 +200,40 @@ public class CassandraTopicStoreIT {
         verify(idGenerator, never()).generateRaw();
         verify(clock, never()).now();
         verify(equiv).doEquivalent(any(Topic.class), any(Topic.class));
+    }
+    
+    @Test
+    public void testUpdatesAliasIndexWhenAliasesChange() {
+        Topic topic = new Topic();
+        topic.setPublisher(Publisher.DBPEDIA);
+        Alias alias1 = new Alias("namespace1", "value1");
+        topic.addAlias(alias1);
+        topic.setType(Type.UNKNOWN);
+        
+        DateTime now = new DateTime(DateTimeZones.UTC);
+        when(clock.now()).thenReturn(now);
+        when(idGenerator.generateRaw()).thenReturn(1234L, 1235L);
+        
+        WriteResult<Topic> writeResult = topicStore.writeTopic(topic);
+
+        Topic written = writeResult.getResource();
+        
+        assertThat(written.getId().longValue(), is(1234L));
+        
+        Alias alias2 = new Alias("namespace2", "value2");
+        written.setAliases(ImmutableList.of(alias2));
+        
+        writeResult = topicStore.writeTopic(written);
+        
+        OptionalMap<Alias, Topic> resolved = topicStore.resolveAliases(
+                ImmutableList.of(alias1), Publisher.DBPEDIA);
+        assertTrue(resolved.isEmpty());
+
+        resolved = topicStore.resolveAliases(
+                ImmutableList.of(alias2), Publisher.DBPEDIA);
+        assertFalse(resolved.isEmpty());
+        
+        
     }
 
 }

@@ -110,7 +110,7 @@ public final class CassandraContentStore extends AbstractContentStore {
     private final ConsistencyLevel readConsistency;
     private final ConsistencyLevel writeConsistency;
     private final ColumnFamily<Long, String> mainCf;
-    private final AliasIndex aliasIndex;
+    private final AliasIndex<Content> aliasIndex;
     
     private final ContentMarshaller marshaller = new ProtobufContentMarshaller();
     private final Function<Row<Long, String>, Content> rowToContent =
@@ -140,8 +140,7 @@ public final class CassandraContentStore extends AbstractContentStore {
         this.writeConsistency = checkNotNull(writeConsistency);
         this.mainCf = ColumnFamily.newColumnFamily(checkNotNull(cfName),
             LongSerializer.get(), StringSerializer.get());
-        this.aliasIndex = new AliasIndex(keyspace, ColumnFamily.newColumnFamily(cfName+"_aliases", 
-            StringSerializer.get(), StringSerializer.get()));
+        this.aliasIndex = AliasIndex.create(keyspace,cfName+"_aliases");
     }
     
     @Override
@@ -185,13 +184,13 @@ public final class CassandraContentStore extends AbstractContentStore {
     }
 
     @Override
-    protected void doWriteContent(Content content) {
+    protected void doWriteContent(Content content, Content previous) {
         try {
             long id = content.getId().longValue();
             MutationBatch batch = keyspace.prepareMutationBatch();
             batch.setConsistencyLevel(writeConsistency);
             marshaller.marshallInto(batch.withRow(mainCf, id), content);
-            aliasIndex.writeAliases(batch, id, content.getPublisher(), content.getAliases());
+            batch.mergeShallow(aliasIndex.mutateAliases(content, previous));
             batch.execute();
         } catch (Exception e) {
             throw new CassandraPersistenceException(content.toString(), e);

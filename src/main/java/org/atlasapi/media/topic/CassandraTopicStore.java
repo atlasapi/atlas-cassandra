@@ -1,8 +1,8 @@
 package org.atlasapi.media.topic;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -26,7 +26,6 @@ import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.metabroadcast.common.collect.ImmutableOptionalMap;
@@ -46,7 +45,6 @@ import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.query.ColumnQuery;
-import com.netflix.astyanax.query.RowSliceQuery;
 import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 
@@ -103,7 +101,7 @@ public class CassandraTopicStore extends AbstractTopicStore {
     private final ConsistencyLevel readConsistency;
     private final ConsistencyLevel writeConsistency;
     private final ColumnFamily<Long, String> mainCf;
-    private final AliasIndex aliasIndex;
+    private final AliasIndex<Topic> aliasIndex;
     
     private final String valueColumn = "topic";
     private final TopicSerializer topicSerializer = new TopicSerializer();
@@ -136,8 +134,7 @@ public class CassandraTopicStore extends AbstractTopicStore {
         this.writeConsistency = checkNotNull(writeCl);
         this.mainCf = ColumnFamily.newColumnFamily(checkNotNull(cfName),
             LongSerializer.get(), StringSerializer.get());
-        this.aliasIndex = new AliasIndex(keyspace, ColumnFamily.newColumnFamily(cfName+"_aliases", 
-            StringSerializer.get(), StringSerializer.get()));
+        this.aliasIndex = AliasIndex.create(keyspace, cfName+"_aliases");
     }
 
     @Override
@@ -181,14 +178,15 @@ public class CassandraTopicStore extends AbstractTopicStore {
     }
     
     @Override
-    protected void doWrite(Topic topic) {
+    protected void doWrite(Topic topic, @Nullable Topic previous) {
+        checkArgument(previous == null || topic.getPublisher().equals(previous.getPublisher()));
         try {
             long id = topic.getId().longValue();
             MutationBatch batch = keyspace.prepareMutationBatch();
             batch.setConsistencyLevel(writeConsistency);
             batch.withRow(mainCf, id)
                 .putColumn(valueColumn, topicSerializer.serialize(topic));
-            aliasIndex.writeAliases(batch, id, topic.getPublisher(), topic.getAliases());
+            batch.mergeShallow(aliasIndex.mutateAliases(topic, previous));
             batch.execute();
         } catch (Exception e) {
             throw new CassandraPersistenceException(topic.toString(), e);
