@@ -5,6 +5,7 @@ import java.util.concurrent.Executors;
 import org.atlasapi.equiv.CassandraEquivalenceRecordStore;
 import org.atlasapi.media.content.CassandraContentStore;
 import org.atlasapi.media.content.ContentHasher;
+import org.atlasapi.media.content.schedule.CassandraScheduleStore;
 import org.atlasapi.media.topic.CassandraTopicStore;
 import org.atlasapi.media.topic.Topic;
 import org.atlasapi.media.topic.TopicStore;
@@ -30,6 +31,7 @@ public class CassandraPersistenceModule extends AbstractIdleService implements P
     private final AstyanaxContext<Keyspace> context;
     private final CassandraContentStore contentStore;
     private final CassandraTopicStore topicStore;
+    private final CassandraScheduleStore scheduleStore;
     private final CassandraEquivalenceRecordStore equivalenceRecordStore;
     
     public CassandraPersistenceModule(Iterable<String> seeds, int port, 
@@ -69,6 +71,10 @@ public class CassandraPersistenceModule extends AbstractIdleService implements P
             .withReadConsistency(ConsistencyLevel.CL_ONE)
             .withWriteConsistency(ConsistencyLevel.CL_QUORUM)
             .build();
+        this.scheduleStore = CassandraScheduleStore.builder(context, "schedule", contentStore)
+                .withReadConsistency(ConsistencyLevel.CL_ONE)
+                .withWriteConsistency(ConsistencyLevel.CL_QUORUM)
+                .build();
         this.equivalenceRecordStore = new CassandraEquivalenceRecordStore(
             context, "equivalence_record", ConsistencyLevel.CL_ONE, ConsistencyLevel.CL_QUORUM
         );
@@ -94,8 +100,13 @@ public class CassandraPersistenceModule extends AbstractIdleService implements P
     }
 
     @Override
-    public TopicStore topicStore() {
+    public CassandraTopicStore topicStore() {
         return topicStore;
+    }
+    
+    @Override
+    public CassandraScheduleStore scheduleStore() {
+        return this.scheduleStore;
     }
     
     private Equivalence<? super Topic> topicEquivalence() {
