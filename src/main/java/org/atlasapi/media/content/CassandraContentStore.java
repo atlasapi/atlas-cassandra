@@ -166,6 +166,9 @@ public final class CassandraContentStore extends AbstractContentStore {
         try {
             Set<Alias> uniqueAliases = ImmutableSet.copyOf(aliases);
             Set<Long> ids = aliasIndex.readAliases(source, uniqueAliases);
+            if (ids.isEmpty()) {
+                return ImmutableOptionalMap.of();
+            }
             // TODO: move timeout to config
             Rows<Long,String> resolved = resolveLongs(ids).get(10, TimeUnit.SECONDS);
             Iterable<Content> contents = Iterables.transform(resolved, rowToContent);
