@@ -135,7 +135,7 @@ public final class CassandraContentStore extends AbstractContentStore {
         String cfName, ConsistencyLevel readConsistency, ConsistencyLevel writeConsistency, 
         ContentHasher hasher, IdGenerator idGenerator, Clock clock) {
         super(hasher, idGenerator, clock);
-        this.keyspace = checkNotNull(context.getEntity());
+        this.keyspace = checkNotNull(context.getClient());
         this.readConsistency = checkNotNull(readConsistency);
         this.writeConsistency = checkNotNull(writeConsistency);
         this.mainCf = ColumnFamily.newColumnFamily(checkNotNull(cfName),
@@ -167,7 +167,7 @@ public final class CassandraContentStore extends AbstractContentStore {
             Set<Alias> uniqueAliases = ImmutableSet.copyOf(aliases);
             Set<Long> ids = aliasIndex.readAliases(source, uniqueAliases);
             // TODO: move timeout to config
-            Rows<Long,String> resolved = resolveLongs(ids).get(1, TimeUnit.MINUTES);
+            Rows<Long,String> resolved = resolveLongs(ids).get(10, TimeUnit.SECONDS);
             Iterable<Content> contents = Iterables.transform(resolved, rowToContent);
             ImmutableMap.Builder<Alias, Optional<Content>> aliasMap = ImmutableMap.builder();
             for (Content content : contents) {

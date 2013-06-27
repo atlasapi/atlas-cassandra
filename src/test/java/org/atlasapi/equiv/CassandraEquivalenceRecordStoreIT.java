@@ -49,7 +49,7 @@ public class CassandraEquivalenceRecordStoreIT {
 
     @AfterClass
     public static void tearDown() throws ConnectionException {
-        context.getEntity().dropKeyspace();
+        context.getClient().dropKeyspace();
     }
 
     @After

@@ -130,7 +130,7 @@ public class CassandraScheduleStore extends AbstractScheduleStore {
             ContentStore contentStore, Clock clock, 
             ConsistencyLevel readCl, ConsistencyLevel writeCl) {
         super(contentStore);
-        this.keyspace = context.getEntity();
+        this.keyspace = context.getClient();
         this.cf = ColumnFamily.newColumnFamily(name, StringSerializer.get(), StringSerializer.get());
         this.clock = clock;
         this.readCl = readCl;

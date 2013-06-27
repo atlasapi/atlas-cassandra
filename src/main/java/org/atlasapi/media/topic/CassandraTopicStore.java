@@ -129,7 +129,7 @@ public class CassandraTopicStore extends AbstractTopicStore {
         ConsistencyLevel readCl, ConsistencyLevel writeCl, Equivalence<? super Topic> equivalence,
         IdGenerator idGenerator, Clock clock) {
         super(idGenerator, equivalence, clock);
-        this.keyspace = checkNotNull(context.getEntity());
+        this.keyspace = checkNotNull(context.getClient());
         this.readConsistency = checkNotNull(readCl);
         this.writeConsistency = checkNotNull(writeCl);
         this.mainCf = ColumnFamily.newColumnFamily(checkNotNull(cfName),

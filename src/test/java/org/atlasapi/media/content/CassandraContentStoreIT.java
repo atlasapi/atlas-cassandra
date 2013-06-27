@@ -79,13 +79,13 @@ public class CassandraContentStoreIT {
     
     @AfterClass
     public static void tearDown() throws ConnectionException {
-        context.getEntity().dropKeyspace();
+        context.getClient().dropKeyspace();
     }
     
     @After
     public void clearCf() throws ConnectionException {
-        context.getEntity().truncateColumnFamily("Content");
-        context.getEntity().truncateColumnFamily("Content_aliases");
+        context.getClient().truncateColumnFamily("Content");
+        context.getClient().truncateColumnFamily("Content_aliases");
     }
     
     @Test

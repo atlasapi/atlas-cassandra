@@ -40,7 +40,7 @@ public class CassandraEquivalenceRecordStore implements EquivalenceRecordStore {
     
     public CassandraEquivalenceRecordStore(AstyanaxContext<Keyspace> context, String cfName,
             ConsistencyLevel readConsistency, ConsistencyLevel writeConsistency) {
-        this.keyspace = checkNotNull(context.getEntity());
+        this.keyspace = checkNotNull(context.getClient());
         this.readConsistency = checkNotNull(readConsistency);
         this.writeConsistency = checkNotNull(writeConsistency);
         this.columnFamily = ColumnFamily.newColumnFamily(cfName, 

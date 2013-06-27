@@ -92,13 +92,13 @@ public class CassandraTopicStoreIT {
 
     @AfterClass
     public static void tearDown() throws ConnectionException {
-        context.getEntity().dropKeyspace();
+        context.getClient().dropKeyspace();
     }
 
     @After
     public void clearCf() throws ConnectionException {
-        CassandraHelper.clearColumnFamily(context, "Content");
-        CassandraHelper.clearColumnFamily(context, "Content_aliases");
+        CassandraHelper.clearColumnFamily(context, "topics");
+        CassandraHelper.clearColumnFamily(context, "topics_aliases");
     }
 
     @Test

@@ -51,7 +51,7 @@ public class CassandraHelper {
     }
     
     public static void createKeyspace(AstyanaxContext<Keyspace> context) throws ConnectionException {
-        context.getEntity().createKeyspace(ImmutableMap.<String, Object> builder()
+        context.getClient().createKeyspace(ImmutableMap.<String, Object> builder()
             .put("strategy_options", ImmutableMap.<String, Object> builder()
                 .put("replication_factor", "1")
                 .build())
@@ -62,7 +62,7 @@ public class CassandraHelper {
 
     public static void createColumnFamily(AstyanaxContext<Keyspace> context, 
               String name, Serializer<?> keySerializer,Serializer<?> colSerializer) throws ConnectionException {
-        context.getEntity().createColumnFamily(
+        context.getClient().createColumnFamily(
             ColumnFamily.newColumnFamily(name, keySerializer, colSerializer),
             ImmutableMap.<String,Object>of()
         );
@@ -70,13 +70,13 @@ public class CassandraHelper {
 
     public static void createColumnFamily(AstyanaxContext<Keyspace> context, 
             String name, Serializer<?> keySerializer,Serializer<?> colSerializer, Serializer<?> valSerializer) throws ConnectionException {
-        context.getEntity().createColumnFamily(
+        context.getClient().createColumnFamily(
                 ColumnFamily.newColumnFamily(name, keySerializer, colSerializer, valSerializer),
                 ImmutableMap.<String,Object>of()
                 );
     }
 
     public static void clearColumnFamily(AstyanaxContext<Keyspace> context, String cfName) throws ConnectionException {
-        context.getEntity().truncateColumnFamily(cfName);        
+        context.getClient().truncateColumnFamily(cfName);        
     }
 }
